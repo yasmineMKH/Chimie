@@ -1000,37 +1000,75 @@ app.get('/enseignant/:username', async (req, res) => {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const { Session } = require('./models');
 
-app.put('/sessions/:sessionId', async (req, res) => {
+// Endpoint pour mettre à jour l'attribut est_ouvert d'une session
+app.get('/sessions/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
-    const { Delai_fermeture } = req.body; // Assurez-vous que le nom de la clé correspond à celle envoyée depuis le frontend
-  
+
     try {
-      // Recherche de la session par son ID dans la base de données
-      const session = await Session.findByPk(sessionId);
-  
-      if (!session) {
-        // Si la session n'est pas trouvée, retourner une erreur 404
-        return res.status(404).json({ error: 'Session not found' });
-      }
-  
-      console.log("Session Closure Delay:", Delai_fermeture, "days");
+        // Recherche de la session par son ID dans la base de données
+        const session = await Session.findByPk(sessionId);
 
-      // Mise à jour du délai de fermeture de la session
-      session.Delai_fermeture = Delai_fermeture;
+        if (!session) {
+            // Si la session n'est pas trouvée, retourner une erreur 404
+            return res.status(404).json({ error: 'Session not found' });
+        }
 
-      // Mise à jour du délai de fermeture de la session
-      await session.save({ fields: ['Delai_fermeture'] });
-      
-      // Utilisation de la méthode ouvrirSession pour mettre à jour les autres attributs de la session
-      //await session.ouvrirSession();
-      // Utilisation de la méthode ouvrirSession pour mettre à jour les autres attributs de la session
-       session.ouvrirSession();
-       
-      // Retourner la session mise à jour en réponse
-      res.json(session);
+        // Retourner la session mise à jour en réponse
+        res.json(session);
     } catch (error) {
-      console.error('Error updating session:', error);
-      // Retourner une erreur 500 en cas d'erreur serveur
-      res.status(500).json({ error: 'Failed to update session' });
+        console.error('Error updating session:', error);
+        // Retourner une erreur 500 en cas d'erreur serveur
+        res.status(500).json({ error: 'Failed to update session' });
     }
-  });
+});
+
+app.put('/sessions/:sessionId/open', async (req, res) => {
+    const { sessionId } = req.params;
+
+    try {
+        // Trouver la session par son ID
+        const session = await Session.findByPk(sessionId);
+
+        if (!session) {
+            // Si la session n'est pas trouvée, retourner une erreur 404
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // Mettre à jour l'attribut est_ouvert de la session à true
+        session.Est_ouverte = true;
+        await session.save();
+
+        // Retourner la session mise à jour
+        res.json(session);
+    } catch (error) {
+        console.error('Error opening session:', error);
+        // Retourner une erreur 500 en cas d'erreur serveur
+        res.status(500).json({ error: 'Failed to open session' });
+    }
+});
+
+// Route pour fermer une session
+app.put('/sessions/:sessionId/close', async (req, res) => {
+    const { sessionId } = req.params;
+
+    try {
+        // Trouver la session par son ID
+        const session = await Session.findByPk(sessionId);
+
+        if (!session) {
+            // Si la session n'est pas trouvée, retourner une erreur 404
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // Mettre à jour l'attribut est_ouvert de la session à false
+        session.Est_ouverte ='false';
+        await session.save();
+
+        // Retourner la session mise à jour
+        res.json(session);
+    } catch (error) {
+        console.error('Error closing session:', error);
+        // Retourner une erreur 500 en cas d'erreur serveur
+        res.status(500).json({ error: 'Failed to close session' });
+    }
+});
