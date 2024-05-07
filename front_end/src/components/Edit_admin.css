@@ -1,0 +1,79 @@
+.dashboard-container_edit_admin {
+    display: flex;
+    background-color: #fff;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    width: 900px; 
+    height: 735px; 
+    max-width: 500%;
+    min-height: 1000%;
+  }
+  
+ 
+  
+  .container_form_edit_admin {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100vh; /* Assure que le conteneur occupe toute la hauteur de la fenêtre */
+    padding-top: 20px;
+  }
+  
+  
+  .container_form_edit_admin h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+.container_form_edit_admin form {
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    height: 100%;
+}
+
+  .container_form_edit_admin form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+  
+  .container_form_edit_admin form input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    background-color: #eee;
+    border: none;
+    border-radius: 100px;
+    margin-bottom: 30px;
+  }
+  .container_form_edit_admin form select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    background-color: #eee;
+    border: none;
+    border-radius: 100px;
+    margin-bottom: 30px;
+  }
+  
+  .container_form_edit_admin form button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background-color:#512da8;
+    color: white;
+    cursor: pointer;
+  }
+  
+  .container_form_edit_admin form button:hover {
+    background-color: #4b0082;
+  }
+  

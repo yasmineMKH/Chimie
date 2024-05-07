@@ -1,0 +1,467 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: none;
+  text-decoration: none;
+  list-style: none;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+
+
+.dashboard-container_admin  {
+    display: flex;
+    background-color: #fff;
+    /*border-radius: 30px;
+    /*box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);*/
+    position: relative;
+    /*overflow: hidden;*/
+    width: 100%;
+    height: 100vh; /* Ajustez la hauteur selon vos besoins */
+    width: 1488px; 
+    height: 750px; 
+    max-width: 500%;
+    min-height: 1000%;
+}
+
+
+.nav_admin {
+  position: sticky;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 200px;
+  height: 100vh; /* Ajustez la hauteur selon vos besoins */
+  background-color: #512da8;
+  color: white;
+  display: flex;
+  flex-direction: column; /* Pour aligner les éléments verticalement */
+  justify-content: flex-start; /* Pour aligner les éléments en haut */
+}
+
+.navbar_admin li a {
+    font-size: 16px;
+    color: white; /* Modifier la couleur du texte en blanc */
+  }
+  
+
+  .navbar_admin {
+    width: 100%; /* Ajustez la largeur selon vos besoins */
+    margin-top: 2rem; /* Ajustez la marge selon vos besoins */
+  }
+
+.logo {
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 3rem;
+  display: flex;
+  align-items: center;
+}
+
+.logo img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.logo h1 {
+  margin-left: 1rem;
+  text-transform: uppercase;
+}
+
+ul {
+  margin: 0 auto;
+}
+
+li {
+  padding-bottom: 2rem;
+}
+
+li a {
+  font-size: 16px;
+  color: rgb(85, 83, 83);
+}
+
+
+
+.nav_admin i {
+  width: 50px;
+  font-size: 18px;
+  text-align: center;
+}
+
+/*.logout {
+  position: absolute;
+  bottom: 20px;
+}*/
+
+/* Main Section */
+.main {
+  width: 100%;
+}
+
+.main-top {
+  width: 100%;
+  background: #fff;
+  padding: 10px;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgb(43, 43, 43);
+}
+
+.main-body {
+  padding: 10px 10px 10px 20px;
+}
+
+h1 {
+  margin: 20px 10px;
+}
+
+.search_bar {
+  display: flex;
+  padding: 10px;
+  justify-content: space-between;
+}
+
+.search_bar input {
+  width: 50%;
+  padding: 10px;
+  border: 1px solid rgb(190, 190, 190);
+}
+
+.search_bar input:focus {
+  border: 1px solid blueviolet;
+}
+
+.search_bar select {
+  border: 1px solid rgb(190, 190, 190);
+  padding: 10px;
+  margin-left: 2rem;
+}
+
+.search_bar .filter {
+  width: 300px;
+}
+
+.tags_bar {
+  width: 55%;
+  display: flex;
+  padding: 10px;
+  justify-content: space-between;
+}
+
+.tag {
+  background: #fff;
+  padding: 10px 15px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tag i {
+  margin-right: 0.7rem;
+}
+
+.row {
+  display: flex;
+  padding: 10px;
+  margin-top: 1.3rem;
+  justify-content: space-between;
+}
+
+.row p {
+  color: rgb(54, 54, 54);
+  font-size: 15px;
+}
+
+.row p span {
+  color: blueviolet;
+}
+
+.job_card {
+  width: 100%;
+  padding: 15px;
+  cursor: pointer;
+  display: flex;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 15px;
+  justify-content: space-between;
+  border: 2px solid rgb(190, 190, 190);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1);
+}
+
+.job_details {
+  display: flex;
+}
+
+.job_details .img {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.job_details .img i {
+  width: 70px;
+  font-size: 3rem;
+  margin-left: 1rem;
+  padding: 10px;
+  color: rgb(82, 22, 138);
+  background: rgb(216, 205, 226);
+}
+
+.job_details .text {
+  margin-left: 2.3rem;
+}
+
+.job_details .text span {
+  color: rgb(116, 112, 112);
+}
+
+.job_salary {
+  text-align: right;
+  color: rgb(54, 54, 54);
+}
+
+.job_card:active {
+  border: 2px solid blueviolet;
+  transition: 0.4s;
+}
+.btn {
+  display: inline-block;
+  padding: 6px 10px; /* Réduire le padding */
+  background-color: #512da8; /* Violet */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+  font-size: 14px; /* Ajuster la taille de la police */
+
+}
+
+.btn:hover {
+  background-color: #4b0082; /* Violet plus foncé au survol */
+}
+
+.search-icon {
+  position: flex;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #555; /* Couleur de l'icône */
+  cursor: pointer;
+}
+.container_form_admin {
+  background-color: #fff;
+  border-radius: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  width: 1500px;
+  max-width: 200%;
+  min-height: 600px;
+
+
+  
+}
+
+.container_form_admin p {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.3px;
+  margin: 20px 0;
+}
+
+.container_form_admin span {
+  font-size: 12px;
+}
+
+.container_form_admin a {
+  color: #333;
+  font-size: 13px;
+  text-decoration: none;
+  margin: 15px 0 10px;
+}
+
+.container_form_admin button {
+  background-color: #512da8;
+  color: #fff;
+  font-size: 12px;
+  padding: 10px 45px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  /*font-weight: 600;*/
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 10px;
+  cursor: pointer;
+  /*padding: 6px 10px; /* Réduire le padding */
+}
+
+.container_form_admin button.hidden {
+  background-color: transparent;
+  border-color: #fff;
+}
+
+.container_form_admin form {
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  height: 100%;
+}
+
+.container_form_admin input {
+  background-color: #eee;
+  border: none;
+  margin: 8px 0;
+  padding: 10px 15px;
+  font-size: 13px;
+  border-radius: 8px;
+  width: 100%;
+  outline: none;
+}
+.container_form_admin select {
+  background-color: #eee;
+  border: none;
+  margin: 8px 0;
+  padding: 10px 15px;
+  font-size: 13px;
+  border-radius: 8px;
+  width: 100%;
+  outline: none;
+}
+
+.form-container {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: all 0.6s ease-in-out;
+}
+
+.sign-in {
+  left: 0;
+  width: 50%;
+  z-index: 2;
+}
+
+.container_form_admin.active .sign-in {
+  transform: translateX(100%);
+}
+
+.sign-up {
+  left: 0;
+  width: 50%;
+  opacity: 0;
+  z-index: 1;
+}
+
+.container_form_admin.active .sign-up {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: move 0.6s;
+}
+
+@keyframes move {
+  0%, 49.99% {
+      opacity: 0;
+      z-index: 1;
+  }
+  50%, 100% {
+      opacity: 1;
+      z-index: 5;
+  }
+}
+
+.social-icons {
+  margin: 20px 0;
+}
+
+.social-icons a {
+  border: 1px solid #ccc;
+  border-radius: 20%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 3px;
+  width: 40px;
+  height: 40px;
+}
+
+.toggle-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: all 0.6s ease-in-out;
+  border-radius: 150px 0 0 100px;
+  z-index: 1000;
+}
+
+.container_form_admin.active .toggle-container {
+  transform: translateX(-100%);
+  border-radius: 0 150px 100px 0;
+}
+
+.toggle {
+  background-color: #512da8;
+  height: 100%;
+  background: linear-gradient(to right, #5c6bc0, #512da8);
+  color: #fff;
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%;
+  transform: translateX(0);
+  transition: all 0.6s ease-in-out;
+}
+
+.container_form_admin.active .toggle {
+  transform: translateX(50%);
+}
+
+.toggle-panel {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 30px;
+  text-align: center;
+  top: 0;
+  transform: translateX(0);
+  transition: all 0.6s ease-in-out;
+}
+
+.toggle-left {
+  transform: translateX(-200%);
+}
+
+.container_form_admin.active .toggle-left {
+  transform: translateX(0);
+}
+
+.toggle-right {
+  right: 0;
+  transform: translateX(0);
+}
+
+.container_form_admin.active .toggle-right {
+  transform: translateX(200%);
+}

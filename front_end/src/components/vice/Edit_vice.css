@@ -1,0 +1,104 @@
+.dashboard_container_edit_vice {
+    display: flex;
+    background-color: #fff;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    width: 900px; 
+    height: 735px; 
+    max-width: 500%;
+    min-height: 1000%;
+  }
+  
+  .nav_vice {
+    position: sticky;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 200px;
+    height: 100vh; /* Ajustez la hauteur selon vos besoins */
+    background-color: #38c3ff;
+    color: white;
+    display: flex;
+    flex-direction: column; /* Pour aligner les éléments verticalement */
+    justify-content: flex-start; /* Pour aligner les éléments en haut */
+    
+  }
+  
+  .navbar_vice li a {
+      font-size: 16px;
+      color: white; /* Modifier la couleur du texte en blanc */
+    }
+    
+  
+    .navbar_vice {
+      width: 100%; /* Ajustez la largeur selon vos besoins */
+      margin-top: 2rem; /* Ajustez la marge selon vos besoins */
+    }
+   
+  
+.container_form_edit_vice {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100vh; /* Assure que le conteneur occupe toute la hauteur de la fenêtre */
+    padding-top: 20px;
+  }
+  
+  
+.container_form_edit_vice h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+.container_form_edit_vice form {
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    height: 100%;
+}
+
+.container_form_edit_vice form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+  
+.container_form_edit_vice form input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    background-color: #eee;
+    border: none;
+    border-radius: 100px;
+    margin-bottom: 30px;
+  }
+.container_form_edit_vice form select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    background-color: #eee;
+    border: none;
+    border-radius: 100px;
+    margin-bottom: 30px;
+  }
+  
+.container_form_edit_vice form button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background-color:#38c3ff;
+    color: white;
+    cursor: pointer;
+  }
+  
+.container_form_edit_vice form button:hover {
+    background-color: #4b0082;
+  }
+  

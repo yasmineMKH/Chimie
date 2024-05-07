@@ -1,0 +1,126 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.container_home {
+    /*width: 1000px;
+    margin: 30px auto;
+    border-radius: 10px;
+    box-shadow: 5px 5px 10px rgb(119, 109, 109), -5px -5px 10px rgb(163, 154, 154);
+    width: 1488px; 
+    height: 700px; 
+    max-width: 500%;
+    min-height: 100%;*/
+
+
+    display: flex;
+    background-color: #fff;
+    /*border-radius: 30px;
+    /*box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);*/
+    position: relative;
+    /*overflow: hidden;*/
+    width: 100%;
+    height: 100vh; /* Ajustez la hauteur selon vos besoins */
+    width: 1488px; 
+    height: 750px; 
+    max-width: 500%;
+    min-height: 100%;
+}
+
+a {
+    text-decoration: none;
+}
+
+header {
+    display: flex;
+}
+
+.label {
+    margin: 29px 0 0 5%;
+}
+
+.label a {
+    color: blue;
+    font-size: 30px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.navbar_home {
+    margin-left: 35%;
+}
+
+.navbar_home ul {
+    list-style: none;
+    display: flex;
+}
+
+.navbar_home ul li {
+    padding: 15px;
+}
+
+.navbar_home ul li a {
+    color: black;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.navbar_home ul li .btn {
+    width: 130px;
+    height: 40px;
+    background: rgb(11, 127, 195);
+    color: white;
+    border-radius: 30px;
+    outline: none;
+    border: none;
+    cursor: pointer;
+}
+
+.body-content {
+    display: flex;
+}
+
+.body-content .b-title {
+    margin-left: 10%;
+}
+
+.body-content .b-title h1 {
+    font-size: 30px;
+    margin-top: 100px;
+}
+
+.body-content .b-title span {
+    color: blue;
+}
+
+.body-content .b-title button {
+    border: none;
+    width: 100px;
+    height: 50px;
+    background: blue;
+    border-radius: 60px;
+    outline: none;
+    color: white;
+}
+
+.body-content .b-title .icons {
+    display: flex;
+    margin-top: 80px;
+}
+
+.body-content .b-title .icons img {
+    width: 25px;
+    height: 25px;
+    padding: 10px;
+}
+
+.body-content .b-img {
+    margin-left: 15%;
+}
+
+.body-content .b-img img {
+    width: 480px;
+    height: 480px;
+}
