@@ -1072,3 +1072,100 @@ app.put('/sessions/:sessionId/close', async (req, res) => {
         res.status(500).json({ error: 'Failed to close session' });
     }
 });
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////Saisir Budget//////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+const {Annee} = require('./models');
+
+// Route to create a new Annee entry with the given global budget
+app.post('/annee', async (req, res) => {
+    const { budgetGlobal } = req.body;
+  
+    try {
+      // Get the current year
+      const currentYear = new Date().getFullYear();
+  
+      // Calculate budgets for enseignement and recherche
+      const pourcentageEns = 0.5;
+      const pourcentageDoc = 0.4;
+      const budgetEns = budgetGlobal * pourcentageEns;
+      const budgetDoc = budgetGlobal * pourcentageDoc;
+  
+      // Create a new Annee entry with the current year and calculated budgets
+      const annee = await Annee.create({
+        Annee: currentYear,
+        Budget_global: budgetGlobal,
+        Budget_ens: budgetEns,
+        Budget_doc: budgetDoc,
+      });
+  
+      res.status(201).json(annee);
+    } catch (error) {
+      console.error('Error creating Annee:', error);
+      res.status(500).json({ error: 'Failed to create Annee' });
+    }
+  });
+  
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////Participation/////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  app.put('/doctorants/:username/confirm', async (req, res) => {
+    const { username } = req.params;
+    console.log('Request body:', req.params);
+    try {
+        // Vérifier si le nom d'utilisateur est unique dans la table SPE_doc
+        const existingSPEdoc = await SPE_doc.findOne({ where: { Username_Mat: username } });
+        if (existingSPEdoc) {
+            return res.status(400).send({ error: 'Username already exists in SPE_doc table' });
+        }
+      
+        // Mettre à jour la base de données pour confirmer la participation
+        await db.Doctorant.update({ Est_participe: 'true' }, { where: { Username_Mat: username } });
+  
+        // Ajouter le nom d'utilisateur à la table SPE_doc
+        await SPE_doc.create({ Username_Mat: username });
+  
+        res.status(200).send({ message: 'Participation confirmed successfully' });
+    } catch (error) {
+        console.error('Error confirming participation:', error);
+        res.status(500).send({ error: 'Failed to confirm participation' });
+    }
+});
+
+
+
+  app.put('/doctorants/:username/cancel', async (req, res) => {
+    const { username } = req.params;
+    console.log('Request body:', req.params);
+    try {
+      // Mettre à jour la base de données pour annuler la participation
+      await db.Doctorant.update({ Est_participe: 'false' }, { where: { Username_Mat:username } });
+  
+      // Supprimer la ligne correspondante dans la table SPE_doc
+      await SPE_doc.destroy({ where: {Username_Mat: username } });
+  
+      res.status(200).send({ message: 'Participation canceled successfully' });
+    } catch (error) {
+      console.error('Error canceling participation:', error);
+      res.status(500).send({ error: 'Failed to cancel participation' });
+    }
+  });
+
+  app.get('/doctorants/:username/status', async (req, res) => {
+    const { username } = req.params;
+    console.log('Request body:', req.params);
+    try {
+      // Recherche du doctorant dans la base de données
+      const doctorant = await db.Doctorant.findOne({ where: { Username_Mat:username } });
+      if (!doctorant) {
+        return res.status(404).send({ error: 'Doctorant not found' });
+      }
+  
+      // Renvoyer l'état de participation du doctorant
+      res.json(doctorant);
+    } catch (error) {
+      console.error('Error fetching participation status:', error);
+      res.status(500).send({ error: 'Failed to fetch participation status' });
+    }
+  });

@@ -12,31 +12,31 @@ module.exports = (sequelize) => {
         },
         Pays: {
             type: DataTypes.STRING(100),
-            allowNull: false
+            allowNull: true
         },
         Ville: {
             type: DataTypes.STRING(100),
-            allowNull: false
+            allowNull: true
         },
         Etablissement_acc: {
             type: DataTypes.STRING(100),
-            allowNull: false
+            allowNull: true
         },
         Date_dep: {
             type: DataTypes.DATEONLY,
-            allowNull: false
+            allowNull: true
         },
         Date_retour: {
             type: DataTypes.DATEONLY,
-            allowNull: false
+            allowNull: true
         },
         Periode_Stage: {
             type: DataTypes.STRING(100),
-            allowNull: false
+            allowNull: true
         },
         Annee: {
             type: DataTypes.STRING(100),
-            allowNull: false
+            allowNull: true
         }
     });
 
