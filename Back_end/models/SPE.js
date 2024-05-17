@@ -30,8 +30,8 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    certificat: {
-      type: DataTypes.STRING(100),
+    Certificat: {
+      type: DataTypes.STRING(255), // Chemin du fichier photo
       allowNull: true,
     },
   });

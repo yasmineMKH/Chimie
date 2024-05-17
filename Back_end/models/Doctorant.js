@@ -127,10 +127,6 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    Labo: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     D_labo: {
       type: DataTypes.STRING,
       allowNull: true,

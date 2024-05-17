@@ -897,7 +897,7 @@ app.post("/demande_SPE", async (req, res) => {
       Date_dep,
       Date_retour,
     });
-
+    console.log(res);
     return res
       .status(201)
       .json({ message: "Demande ajoutée avec succès dans la table SPE" });
@@ -1341,3 +1341,57 @@ app.put("/deleteteacher/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+////////////////////////////////////////////ajouter certificat////////////////////////////////////////////
+
+const router = express.Router(); // Assurez-vous que le modèle est correctement importé
+
+// Configuration de Multer pour stocker les fichiers téléchargés dans le dossier 'uploads'
+const storage2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "certificate/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+const upload2 = multer({ storage: storage2 });
+
+router.post("/demande_SPE", upload2.single("photo"), async (req, res) => {
+  try {
+    // Récupération des données du formulaire et du fichier téléchargé
+    const {
+      Username_Mat,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Periode_Stage,
+      Annee,
+      Date_dep,
+      Date_retour,
+      certificat,
+    } = req.body;
+    const certificatFile = req.file;
+
+    // Sauvegarde du chemin du fichier dans la base de données
+    const speDoc = await SPE_doc.create({
+      Username_Mat,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Periode_Stage,
+      Annee,
+      Date_dep,
+      Date_retour,
+      Certificat: certificatFile.path, // Stockage du chemin du fichier photo dans la base de données
+    });
+
+    res.status(201).send("Demande de stage ajoutée avec succès.");
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de la demande de stage :", error);
+    res
+      .status(500)
+      .send("Une erreur s'est produite lors du traitement de votre demande.");
+  }
+});
+
+module.exports = router;
