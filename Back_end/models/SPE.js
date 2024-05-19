@@ -2,6 +2,10 @@ const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
   const SPE_doc = sequelize.define("SPE_doc", {
+    Username_Mat: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+    },
     Pays: {
       type: DataTypes.STRING(100),
       allowNull: true,
@@ -34,7 +38,31 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(255), // Chemin du fichier photo
       allowNull: true,
     },
+    id_binome: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    Username_Nss1: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    Username_Nss2: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
   });
-
+  sequelize
+    .sync({ force: true })
+    .then(() => {
+      console.log(
+        "La base de données a été reconstruite (toutes les tables ont été supprimées et recréées)."
+      );
+    })
+    .catch((err) => {
+      console.error(
+        "Erreur lors de la synchronisation de la base de données:",
+        err
+      );
+    });
   return SPE_doc;
 };

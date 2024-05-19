@@ -1,7 +1,7 @@
 const multer = require("multer");
 
 // Set up storage for uploaded files
-const storage2 = multer.diskStorage({
+const storage1 = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "./certificate/");
   },
@@ -11,6 +11,6 @@ const storage2 = multer.diskStorage({
 });
 
 // Create the multer instance
-const upload2 = multer({ storage: storage2 });
+const upload1 = multer({ storage: storage1 });
 
 module.exports = certificate;
