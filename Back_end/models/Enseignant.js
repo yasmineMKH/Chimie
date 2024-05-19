@@ -58,7 +58,7 @@ module.exports = (sequelize) => {
     Departement: {
       type: DataTypes.STRING(100),
       allowNull: false,
-    },
+  },
     Email: {
       type: DataTypes.STRING(100),
       allowNull: false,

@@ -862,23 +862,23 @@ app.delete("/membre_commission/all", async (req, res) => {
 /////////////////////////////////////////////////////////////////demande SPE////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const { SPE_doc } = require("./models");
-app.post("/demande_SPE", async (req, res) => {
+app.post("/:Username/demande_SPE", async (req, res) => {
   // Récupérer les données du corps de la requête
   const {
-    Username_Mat,
     Pays,
     Ville,
     Etablissement_acc,
     Periode_Stage,
-    Annee,
     Date_dep,
     Date_retour,
   } = req.body;
 
+  const { Username } = req.params;
+  console.log("Request body:", req.body);
   try {
     // Vérifier si la demande existe déjà dans la table SPE
     const existingDemande = await db.SPE_doc.findOne({
-      where: { Username_Mat },
+      where: { Username_Mat:Username },
     });
     if (existingDemande) {
       return res
@@ -888,16 +888,20 @@ app.post("/demande_SPE", async (req, res) => {
 
     // Ajouter la demande dans la table SPE
     await db.SPE_doc.create({
-      Username_Mat,
+      Username_Mat:Username,
       Pays,
       Ville,
       Etablissement_acc,
       Periode_Stage,
-      Annee,
       Date_dep,
       Date_retour,
     });
 
+// Mettre à jour la base de données pour confirmer la participation
+await db.Doctorant.update(
+  { Est_participe: "true" },
+  { where: { Username_Mat:Username } }
+);
     return res
       .status(201)
       .json({ message: "Demande ajoutée avec succès dans la table SPE" });
@@ -911,6 +915,135 @@ app.post("/demande_SPE", async (req, res) => {
       .json({ error: "Échec de l'ajout de la demande dans la table SPE" });
   }
 });
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////check Décision SPE///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get('/doctorants/:username/decision', async (req, res) => {
+  const { username } = req.params;
+  try {
+    const docSpe = await SPE_doc.findOne({ where: { Username_Mat: username } });
+
+    if (!docSpe) {
+      return res.status(404).send({ message: "No record found for the given username" });
+    }
+
+    const decisionMessage = SPE_doc.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    res.status(200).send({ message: decisionMessage });
+  } catch (error) {
+    console.error('Error checking decision:', error);
+    res.status(500).send({ error: "Failed to check decision" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////Annuler demande SPE//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.put("/doctorants/:username/cancel", async (req, res) => {
+  const { username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    // Mettre à jour la base de données pour annuler la participation
+    await db.Doctorant.update(
+      { Est_participe: "false" },
+      { where: { Username_Mat: username } }
+    );
+
+    // Supprimer la ligne correspondante dans la table SPE_doc
+    await SPE_doc.destroy({ where: { Username_Mat: username } });
+
+    res.status(200).send({ message: "Participation canceled successfully" });
+  } catch (error) {
+    console.error("Error canceling participation:", error);
+    res.status(500).send({ error: "Failed to cancel participation" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Recours//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+const { Recours } = require("./models");
+
+app.post('/:Username/recours_SPE', async (req, res) => {
+  const { Username } = req.params;
+  const { Commentaire } = req.body;
+
+  const existingRecours = await Recours.findOne({
+    where: {
+      Username_Mat: Username,
+      TypeDemande: "Stage de perfectionnement à l’étranger",
+    },
+  });
+
+  if (existingRecours) {
+    return res.status(400).json({ error: "Un recours existe déjà pour ce type de demande et cet utilisateur." });
+  }
+  try {
+    // Ajouter la demande dans la table Recours
+    await Recours.create({
+      Username_Mat:Username,
+      Commentaire,
+      TypeDemande: "Stage de perfectionnement à l’étranger", // Ajouter TypeDemande directement ici
+    });
+
+    return res.status(201).json({ message: "Recours ajouté avec succès" });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du recours SPE :", error);
+    return res.status(500).json({ error: "Échec de l'ajout du recours SPE" });
+  }
+});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////// vérifier ouverture session Recours//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+app.get('/session/recours/is_open', async (req, res) => {
+  
+
+  try {
+    // Recherche de la session correspondant à l'utilisateur spécifié
+    const session = await Session.findOne({
+      where: {
+        Nom_S: "Recours", // Nom de la session à vérifier
+      },
+    });
+
+    // Vérifier si la session existe et si elle est ouverte
+    const isSessionOpen = session.Est_ouverte === "true" ? true : false;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res.status(500).json({ error: "Échec de la vérification de la session" });
+  }
+});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Vérifier ouverture sesion SPE//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+app.get('/session/is_open_stage_perfectionnement', async (req, res) => {
+  
+
+  try {
+    // Recherche de la session correspondant à l'utilisateur spécifié
+    const session = await Session.findOne({
+      where: {
+        Nom_S: "Stage de perfectionnement à l’étrangé", // Nom de la session à vérifier
+      },
+    });
+
+    // Vérifier si la session existe et si elle est ouverte
+    const isSessionOpen = session.Est_ouverte === "true" ? true : false;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res.status(500).json({ error: "Échec de la vérification de la session" });
+  }
+});
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1194,25 +1327,7 @@ app.put("/doctorants/:username/confirm", async (req, res) => {
   }
 });
 
-app.put("/doctorants/:username/cancel", async (req, res) => {
-  const { username } = req.params;
-  console.log("Request body:", req.params);
-  try {
-    // Mettre à jour la base de données pour annuler la participation
-    await db.Doctorant.update(
-      { Est_participe: "false" },
-      { where: { Username_Mat: username } }
-    );
 
-    // Supprimer la ligne correspondante dans la table SPE_doc
-    await SPE_doc.destroy({ where: { Username_Mat: username } });
-
-    res.status(200).send({ message: "Participation canceled successfully" });
-  } catch (error) {
-    console.error("Error canceling participation:", error);
-    res.status(500).send({ error: "Failed to cancel participation" });
-  }
-});
 
 app.get("/doctorants/:username/status", async (req, res) => {
   const { username } = req.params;
@@ -1266,50 +1381,83 @@ app.get("/uploadfile", (req, res) => {
   });
 });
 /////////////////////////////add teahcer/////////////////////////////////////////////////////////////////////
-app.put("/addteacher", async (req, res) => {
+app.post('/addteacher', async (req, res) => {
+  const {
+    Username_NSS,
+    Firstname_fr,
+    Lastname_fr,
+    Firstname_ab,
+    Lastname_ab,
+    Date_naissance,
+    Lieu_naissance,
+    Numero_telephone,
+    Sexe,
+    Grade,
+    Specialite,
+    Laboratoire,
+    Departement,
+    Email,
+    Usthb,
+    Situation
+  } = req.body;
+
   try {
-    const teacherData = req.body;
-
-    console.log(teacherData);
-
-    // Check if the teacher already exists
-    const [teacher, created] = await Enseignant.findOrCreate({
-      where: {
-        Username_NSS: teacherData.Username_NSS,
-      },
-      defaults: teacherData,
+    // Vérifiez si l'enseignant existe déjà
+    const existingTeacher = await Enseignants.findOne({
+      where: { Username_NSS }
     });
 
-    if (created) {
-      return res
-        .status(200)
-        .json({ teacher, message: "Teacher created successfully" });
-    } else {
-      return res.status(400).json({ error: "Teacher already exists" });
+    if (existingTeacher) {
+      return res.status(400).json({ error: 'Username_NSS already exists' });
     }
+
+    // Créez un nouvel enseignant
+    const newTeacher = await Enseignants.create({
+      Username_NSS,
+      Firstname_fr,
+      Lastname_fr,
+      Firstname_ab,
+      Lastname_ab,
+      Date_naissance,
+      Lieu_naissance,
+      Numero_telephone,
+      Sexe,
+      Grade,
+      Specialite,
+      Laboratoire,
+      Departement,
+      Email,
+      Usthb,
+      Situation
+    });
+
+    res.status(201).json(newTeacher);
   } catch (error) {
-    console.error("Error in adding a teacher:", error);
-    return res.status(500).json({ error: "Failed to add teacher" });
+    console.error('Error adding teacher:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 /////////////////////////////////////////////////update Teacher//////////////////////////////////////////////
 app.put("/updateacher/:id", async (req, res) => {
-  const teacherId = parseInt(req.params.id);
+  const id = req.params.id; // Accédez à l'ID correctement
   const updatedData = req.body;
-
+  console.log("Request body:", req.params);
   try {
     // Find the teacher by ID
-    const teacher = await Enseignant.findByPk(teacherId);
+    const teacher = await db.Enseignants.findOne({
+      where: { id: id }, // Utilisez l'ID correctement
+    });
 
-    // If teacher with given ID is not found, return 404
+    // Si l'enseignant avec l'ID donné n'est pas trouvé, retournez 404
     if (!teacher) {
       return res.status(404).json({ error: "Teacher not found" });
     }
 
-    // Update the teacher's information
+    // Mettre à jour les informations de l'enseignant
     await teacher.update(updatedData);
 
-    // Send the updated teacher in the response
+    // Envoyer l'enseignant mis à jour dans la réponse
     res.status(200).json(teacher);
   } catch (error) {
     console.error("Error updating teacher:", error);
@@ -1319,12 +1467,12 @@ app.put("/updateacher/:id", async (req, res) => {
 
 /////////////////////////////////////////////////delete Teahcer///////////////////////////////////////////////
 
-app.put("/deleteteacher/:id", async (req, res) => {
-  const teacherId = parseInt(req.params.id);
-
+app.delete("/deleteteacher/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log("Request body:", req.params);
   try {
     // Find the teacher by ID
-    const teacher = await Enseignant.findByPk(teacherId);
+    const teacher = await Enseignants.findByPk(id);
 
     // If teacher with given ID is not found, return 404
     if (!teacher) {
@@ -1332,12 +1480,333 @@ app.put("/deleteteacher/:id", async (req, res) => {
     }
 
     // Delete the teacher
-    await teacher.destroy();
+
+    await db.Enseignants.destroy({
+      where: { id: id },
+    });
 
     // Send success message
     res.status(200).json({ message: "Teacher deleted successfully" });
   } catch (error) {
     console.error("Error deleting teacher:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+/////////////////////////////add doctorant/////////////////////////////////////////////////////////////////////
+const { Doctorant } = require("./models");
+app.post('/adddoctorant', async (req, res) => {
+  const {
+    Username_Mat,
+    Titre,
+    Nom_fr,
+    Prenoms_fr,
+    Nom_ab,
+    Prenoms_ab,
+    Date_naiss,
+    Lieu_naiss,
+    Nationalit,
+    Statut,
+    Type_inscri,
+    Filiere,
+    Domaine,
+    Option,
+    Sexe,
+    Adresse,
+    Mail,
+    Org_employ,
+    Dip_acces,
+    Dat_obten,
+    Lieu_obten,
+    An_univer,
+    Gel,
+    Sujet,
+    Dir_these,
+    Grade_dir,
+    Lieu_exer,
+    Code_dir,
+    Grade_codir,
+    L_exer,
+    Cdir_these,
+    Labo,
+    D_labo,
+    Numero_telephone,
+    Grade,
+    Laboratoire,
+    Departement,
+    Usthb,
+    President,
+    Promoteur
+  } = req.body;
+
+  try {
+    // Vérifiez si l'enseignant existe déjà
+    const existingTeacher = await Doctorant.findOne({
+      where: { Username_Mat }
+    });
+
+    if (existingTeacher) {
+      return res.status(400).json({ error: 'Username_NSS already exists' });
+    }
+
+    // Créez un nouvel enseignant
+    const newTeacher = await Doctorant.create({
+      Username_Mat,
+    Titre,
+    Nom_fr,
+    Prenoms_fr,
+    Nom_ab,
+    Prenoms_ab,
+    Date_naiss,
+    Lieu_naiss,
+    Nationalit,
+    Statut,
+    Type_inscri,
+    Filiere,
+    Domaine,
+    Option,
+    Sexe,
+    Adresse,
+    Mail,
+    Org_employ,
+    Dip_acces,
+    Dat_obten,
+    Lieu_obten,
+    An_univer,
+    Gel,
+    Sujet,
+    Dir_these,
+    Grade_dir,
+    Lieu_exer,
+    Code_dir,
+    Grade_codir,
+    L_exer,
+    Cdir_these,
+    Labo,
+    D_labo,
+    Numero_telephone,
+    Grade,
+    Laboratoire,
+    Departement,
+    Usthb,
+    President,
+    Promoteur
+    });
+
+    res.status(201).json(newTeacher);
+  } catch (error) {
+    console.error('Error adding teacher:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/////////////////////////////////////////////////update doctorant//////////////////////////////////////////////
+app.put("/updatdoctorant/:id", async (req, res) => {
+  const id = req.params.id; // Accédez à l'ID correctement
+  const updatedData = req.body;
+  console.log("Request body:", req.params);
+  try {
+    // Find the teacher by ID
+    const doctorant = await db.Doctorant.findOne({
+      where: { id: id }, // Utilisez l'ID correctement
+    });
+
+    // Si l'enseignant avec l'ID donné n'est pas trouvé, retournez 404
+    if (!doctorant) {
+      return res.status(404).json({ error: "doctorant not found" });
+    }
+
+    // Mettre à jour les informations de l'enseignant
+    await doctorant.update(updatedData);
+
+    // Envoyer l'enseignant mis à jour dans la réponse
+    res.status(200).json(doctorant);
+  } catch (error) {
+    console.error("Error updating doctorant:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/////////////////////////////////////////////////delete doctorant///////////////////////////////////////////////
+
+app.delete("/deletedoctorant/:id", async (req, res) => {
+  const id = req.params.id;
+  console.log("Request body:", req.params);
+  try {
+    // Find the teacher by ID
+    const doctorants = await Doctorant.findByPk(id);
+
+    // If teacher with given ID is not found, return 404
+    if (!doctorants) {
+      return res.status(404).json({ error: "doctorants not found" });
+    }
+
+    // Delete the teacher
+
+    await db.Doctorant.destroy({
+      where: { id: id },
+    });
+
+    // Send success message
+    res.status(200).json({ message: "doctorant deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting doctorant:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////GET Doctorant////////////////////////////////////////////////////////////////////////////////////
+app.get("/doctorants", async (req, res) => {
+  try {
+    const doctorants = await Doctorant.findAll();
+    res.json(doctorants);
+  } catch (error) {
+    console.error("Error fetching doctorants:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////// Get all SPE_doc/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+app.get('/SPE/:Username', async (req, res) => {
+  const { Username } = req.params;
+  try {
+    // Find the binome id associated with the given Username
+    const binome = await Binome_Comission.findOne({
+      where: {
+        [Op.or]: [
+          { Username_NSS1: Username },
+          { Username_NSS2: Username }
+        ]
+      }
+    });
+
+    if (!binome) {
+      return res.status(404).json({ message: "Binome not found for the given Username" });
+    }
+
+    // Fetch all SPE_doc records with the found id_Binome
+    const doctorants = await SPE_doc.findAll({
+      where: {
+        id_Binome: binome.id
+      }
+    });
+
+    res.json(doctorants);
+  } catch (error) {
+    console.error('Error fetching SPE_doc data:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////Saisire la note plus l'affectation à un troisieme membre//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/*app.put('/updatSPE/:id', async (req, res) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+
+  try {
+    const result = await SPE_doc.update(updatedData, { where: { id } });
+    if (result[0] > 0) {
+      res.sendStatus(200);
+    } else {
+      res.status(404).send('Doctorant not found');
+    }
+  } catch (error) {
+    console.error('Error updating SPE_doc:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});*/
+
+app.put('/SPE/update/:id', async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  try {
+    const speDoc = await SPE_doc.findByPk(id);
+    if (!speDoc) {
+      return res.status(404).json({ message: "SPE_doc not found" });
+    }
+
+    if (speDoc.Note1 === null) {
+      speDoc.Note1 = note;
+    } else if (speDoc.Note2 === null) {
+      speDoc.Note2 = note;
+      const diff = Math.abs(speDoc.Note1 - speDoc.Note2);
+      // If both notes are assigned, calculate the final note
+    
+
+      if (diff === 0) {
+        speDoc.Note_finale = speDoc.Note1; // or Note2 since they are equal
+      } else {
+        // Fetch the binome associated with this SPE_doc
+        const binome = await Binome_Comission.findByPk(speDoc.id_Binome);
+
+        console.log("binome:", binome);
+        if (binome) {
+          try {
+            // Exécuter une requête SQL JOIN pour exclure les membres du binôme de la liste des membres potentiels
+            const potentialMembers = await Membre_Commission.findAll({
+              where: {
+                Username_NSS: {
+                  [Op.notIn]: [binome.Username_NSS1, binome.Username_NSS2, speDoc.Username_Mat]
+                }
+              }
+            });
+            
+            // Sélectionner un membre qui répond aux critères
+            if (potentialMembers.length > 0) {
+              const selectedMember = potentialMembers[0];
+              speDoc.Username_NSS3 = selectedMember.Username_NSS;
+            }
+          } catch (error) {
+            console.error("Error fetching potential members:", error);
+          }
+      }}}
+      else {
+      speDoc.Note_finale = note;
+      await speDoc.save();
+      return res.status(200).json(speDoc);
+    }
+
+    /*if (speDoc.Note1 !== null && speDoc.Note2 !== null) {
+      const diff = Math.abs(speDoc.Note1 - speDoc.Note2);
+      if (diff === 0) {
+        speDoc.Note_finale = speDoc.Note1; // Or Note2 since they are equal
+      } else {
+        // Fetch all members excluding the ones already in the document
+        const binome = await Binome_Commission.findByPk(speDoc.id_Binome);
+        let potentialMembers = await Membre_Commission.findAll({
+          where: {
+            Username_NSS: { [Op.ne]: speDoc.Username_Mat }
+          }
+        });
+
+        if (binome) {
+          potentialMembers = potentialMembers.filter(member =>
+            member.Username_NSS !== binome.Username_NSS1 &&
+            member.Username_NSS !== binome.Username_NSS2
+          );
+        }
+
+        // Pick a member who satisfies the condition
+        const selectedMember = potentialMembers[Math.floor(Math.random() * potentialMembers.length)];
+        speDoc.Username_NSS3 = selectedMember.Username_NSS;
+      }
+    }*/
+
+    await speDoc.save();
+    res.status(200).json(speDoc);
+  } catch (error) {
+    console.error('Error updating SPE_doc:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
