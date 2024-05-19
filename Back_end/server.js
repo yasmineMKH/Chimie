@@ -896,12 +896,16 @@ app.post("/:Username/demande_SPE", async (req, res) => {
       Date_dep,
       Date_retour,
     });
+<<<<<<< HEAD
 
 // Mettre à jour la base de données pour confirmer la participation
 await db.Doctorant.update(
   { Est_participe: "true" },
   { where: { Username_Mat:Username } }
 );
+=======
+    console.log(res);
+>>>>>>> 4f0d013147667087f4d27dff33cb054a34766364
     return res
       .status(201)
       .json({ message: "Demande ajoutée avec succès dans la table SPE" });
@@ -1492,6 +1496,7 @@ app.delete("/deleteteacher/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+<<<<<<< HEAD
 
 /////////////////////////////add doctorant/////////////////////////////////////////////////////////////////////
 const { Doctorant } = require("./models");
@@ -1810,3 +1815,131 @@ app.put('/SPE/update/:id', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+=======
+////////////////////////////////////////////ajouter certificat////////////////////////////////////////////
+
+const router = express.Router(); // Assurez-vous que le modèle est correctement importé
+const storage1 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./certificate/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+const upload1 = multer({ storage1: storage });
+
+app.post("/demande_SPe", upload1.single("file"), async (req, res) => {
+  const {
+    Username_Mat,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+    Annee,
+  } = req.body;
+  const certificatFile = req.file;
+  console.log("Username_Mat:", Username_Mat);
+  console.log("Pays:", Pays);
+  console.log("Ville:", Ville);
+  console.log("Etablissement_acc:", Etablissement_acc);
+  console.log("Periode_Stage:", Periode_Stage);
+  console.log("Annee:", Annee);
+  console.log("Date_dep:", Date_dep);
+  console.log("Date_retour:", Date_retour);
+  console.log("Certificat File:", certificatFile);
+  console.log("Données reçues:", req.body); // Ajoutez cette ligne pour voir les données reçues
+  console.log("Fichier reçu:", certificatFile); // Ajoutez cette ligne pour voir les détails du fichier reçu
+
+  if (
+    !Username_Mat ||
+    !Pays ||
+    !Ville ||
+    !Etablissement_acc ||
+    !Periode_Stage ||
+    !Annee ||
+    !Date_dep ||
+    !Date_retour ||
+    !certificatFile
+  ) {
+    return res.status(400).json({ error: "All fields are required." });
+  }
+
+  try {
+    const existingDemande = await db.SPE_doc.findOne({
+      where: { Username_Mat },
+    });
+    if (existingDemande) {
+      return res
+        .status(400)
+        .json({ error: "Demande already exists in SPE table" });
+    }
+
+    await db.SPE_doc.create({
+      Username_Mat,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+      Annee,
+      Certificat: certificatFile.path,
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Demande ajoutée avec succès dans la table SPE" });
+  } catch (error) {
+    console.error(
+      "Erreur lors de l'ajout de la demande dans la table SPE :",
+      error
+    );
+    return res
+      .status(500)
+      .json({ error: "Échec de l'ajout de la demande dans la table SPE" });
+  }
+});
+/////////////////////////////////////////////get demande////////////////////////////////////////////////////
+app.get("/demande", async (req, res) => {
+  try {
+    const demandes = await SPE_doc.findAll();
+    res.json(demandes);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+//////////////////////////////////////////get binomes qui traitent seulement les dossier doctorant/////////////
+app.get("/binomes_doc", async (req, res) => {
+  try {
+    const binomes = await Binome_Comission.findAll({
+      where: {
+        Type_traitement: "traitement_doctorant",
+      },
+    });
+    res.json(binomes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch binomes" });
+  }
+});
+////////////////////////////////////////affectation des dossiers Doctorants au binomme //////////////////////////
+app.use(express.json());
+
+app.post("/demande/affectation", async (req, res) => {
+  const { id, id_binome, Username_Nss1, Username_Nss2 } = req.body;
+  try {
+    await SPE_doc.update(
+      { id_binome, Username_Nss1, Username_Nss2 },
+      { where: { id } }
+    );
+    res.status(200).json({ message: "Demande validée avec succès" });
+  } catch (error) {
+    console.error("Error validating demande:", error);
+    res.status(500).json({ error: "Failed to validate demande" });
+  }
+});
+>>>>>>> 4f0d013147667087f4d27dff33cb054a34766364

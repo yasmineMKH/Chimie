@@ -50,8 +50,20 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    certificat: {
-      type: DataTypes.STRING(100),
+    Certificat: {
+      type: DataTypes.STRING(255), // Chemin du fichier photo
+      allowNull: true,
+    },
+    id_binome: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    Username_Nss1: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    Username_Nss2: {
+      type: DataTypes.STRING(20),
       allowNull: true,
     },
     Document: {
@@ -63,6 +75,18 @@ module.exports = (sequelize) => {
       allowNull: true,
     }
   });
-
+  sequelize
+    .sync({ force: true })
+    .then(() => {
+      console.log(
+        "La base de données a été reconstruite (toutes les tables ont été supprimées et recréées)."
+      );
+    })
+    .catch((err) => {
+      console.error(
+        "Erreur lors de la synchronisation de la base de données:",
+        err
+      );
+    });
   return SPE_doc;
 };
