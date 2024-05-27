@@ -4,6 +4,7 @@ const app = express();
 const { Op } = require("sequelize");
 const bcrypt = require("bcrypt");
 const db = require("./models");
+const path = require("path");
 const upload = require("./middleware/upload");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -33,11 +34,17 @@ app.use(cors()); // Activer CORS pour toutes les routes
 app.get('/',(req,res)=>{
   res.send(data.users)
 });*/
-
-db.sequelize.sync().then(() => {
-  app.listen(3002, () => console.log("Server is running on port 3002"));
-});
-
+db.sequelize
+  .sync({ force: false })
+  .then(() => {
+    app.listen(3002, () => console.log("Server is running on port 3002"));
+  })
+  .catch((error) => {
+    console.error(
+      "Erreur lors de la synchronisation de la base de données :",
+      error
+    );
+  });
 ///////////////////////////////////////////////////////////////////fonction Registration///////////////////////////////////////////////////////////////////////////////////
 
 // Nombre de "salts" à utiliser pour le hachage (plus le nombre est élevé, plus le hachage est sécurisé mais prend du temps)
@@ -878,7 +885,7 @@ app.post("/:Username/demande_SPE", async (req, res) => {
   try {
     // Vérifier si la demande existe déjà dans la table SPE
     const existingDemande = await db.SPE_doc.findOne({
-      where: { Username_Mat:Username },
+      where: { Username_Mat: Username },
     });
     if (existingDemande) {
       return res
@@ -888,24 +895,22 @@ app.post("/:Username/demande_SPE", async (req, res) => {
 
     // Ajouter la demande dans la table SPE
     await db.SPE_doc.create({
-      Username_Mat:Username,
+      Username_Mat: Username,
       Pays,
       Ville,
       Etablissement_acc,
       Periode_Stage,
       Date_dep,
       Date_retour,
+      annee,
     });
-<<<<<<< HEAD
 
-// Mettre à jour la base de données pour confirmer la participation
-await db.Doctorant.update(
-  { Est_participe: "true" },
-  { where: { Username_Mat:Username } }
-);
-=======
+    // Mettre à jour la base de données pour confirmer la participation
+    await db.Doctorant.update(
+      { Est_participe: "true" },
+      { where: { Username_Mat: Username } }
+    );
     console.log(res);
->>>>>>> 4f0d013147667087f4d27dff33cb054a34766364
     return res
       .status(201)
       .json({ message: "Demande ajoutée avec succès dans la table SPE" });
@@ -922,19 +927,22 @@ await db.Doctorant.update(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////check Décision SPE///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-app.get('/doctorants/:username/decision', async (req, res) => {
+app.get("/doctorants/:username/decision", async (req, res) => {
   const { username } = req.params;
   try {
     const docSpe = await SPE_doc.findOne({ where: { Username_Mat: username } });
 
     if (!docSpe) {
-      return res.status(404).send({ message: "No record found for the given username" });
+      return res
+        .status(404)
+        .send({ message: "No record found for the given username" });
     }
 
-    const decisionMessage = SPE_doc.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    const decisionMessage =
+      SPE_doc.Decision === "true" ? "Accepté" : "Pas encore accepté";
     res.status(200).send({ message: decisionMessage });
   } catch (error) {
-    console.error('Error checking decision:', error);
+    console.error("Error checking decision:", error);
     res.status(500).send({ error: "Failed to check decision" });
   }
 });
@@ -968,7 +976,7 @@ app.put("/doctorants/:username/cancel", async (req, res) => {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const { Recours } = require("./models");
 
-app.post('/:Username/recours_SPE', async (req, res) => {
+app.post("/:Username/recours_SPE", async (req, res) => {
   const { Username } = req.params;
   const { Commentaire } = req.body;
 
@@ -980,12 +988,15 @@ app.post('/:Username/recours_SPE', async (req, res) => {
   });
 
   if (existingRecours) {
-    return res.status(400).json({ error: "Un recours existe déjà pour ce type de demande et cet utilisateur." });
+    return res.status(400).json({
+      error:
+        "Un recours existe déjà pour ce type de demande et cet utilisateur.",
+    });
   }
   try {
     // Ajouter la demande dans la table Recours
     await Recours.create({
-      Username_Mat:Username,
+      Username_Mat: Username,
       Commentaire,
       TypeDemande: "Stage de perfectionnement à l’étranger", // Ajouter TypeDemande directement ici
     });
@@ -1000,10 +1011,7 @@ app.post('/:Username/recours_SPE', async (req, res) => {
 ////////////////////////////////////////////////////////////// vérifier ouverture session Recours//////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-app.get('/session/recours/is_open', async (req, res) => {
-  
-
+app.get("/session/recours/is_open", async (req, res) => {
   try {
     // Recherche de la session correspondant à l'utilisateur spécifié
     const session = await Session.findOne({
@@ -1018,17 +1026,16 @@ app.get('/session/recours/is_open', async (req, res) => {
     return res.status(200).json({ is_open: isSessionOpen });
   } catch (error) {
     console.error("Erreur lors de la vérification de la session :", error);
-    return res.status(500).json({ error: "Échec de la vérification de la session" });
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
   }
 });
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////Vérifier ouverture sesion SPE//////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-app.get('/session/is_open_stage_perfectionnement', async (req, res) => {
-  
-
+app.get("/session/is_open_stage_perfectionnement", async (req, res) => {
   try {
     // Recherche de la session correspondant à l'utilisateur spécifié
     const session = await Session.findOne({
@@ -1043,10 +1050,11 @@ app.get('/session/is_open_stage_perfectionnement', async (req, res) => {
     return res.status(200).json({ is_open: isSessionOpen });
   } catch (error) {
     console.error("Erreur lors de la vérification de la session :", error);
-    return res.status(500).json({ error: "Échec de la vérification de la session" });
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
   }
 });
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1055,9 +1063,11 @@ const { Binome_Comission } = require("./models");
 app.post("/binome_comission/create", async (req, res) => {
   try {
     // Récupérer les enseignants de la commission
-    const enseignants = await db.Membre_Commission.findAll({
-      where: { Président: "false" },
+    await Binome_Comission.destroy({
+      where: {},
+      truncate: true,
     });
+    const enseignants = await db.Membre_Commission.findAll();
 
     // Déterminer la moitié de la longueur des enseignants arrondie à l'entier supérieur
     const halfLength = Math.ceil(enseignants.length / 2);
@@ -1123,8 +1133,8 @@ app.get("/binome_comission", async (req, res) => {
       // Ajouter le binôme avec les informations des enseignants dans le tableau
       binomesAvecEnseignants.push({
         id: binome.id,
-        Username_Nss1: binome.Username_Nss1,
-        Username_Nss2: binome.Username_Nss2,
+        Username_Nss1: enseignant1.Firstname_fr + " " + enseignant1.Lastname_fr,
+        Username_Nss2: enseignant2.Firstname_fr + " " + enseignant2.Lastname_fr,
         Type_traitement: binome.Type_traitement,
         Enseignant1: enseignant1,
         Enseignant2: enseignant2,
@@ -1283,7 +1293,7 @@ app.post("/annee", async (req, res) => {
     const budgetEns = budgetGlobal * pourcentageEns;
     const budgetDoc = budgetGlobal * pourcentageDoc;
 
-    // Create a new Annee entry with the current year and calculated budgets
+    // Create a new  entry with the current year and calculated budgets
     const annee = await Annee.create({
       Annee: currentYear,
       Budget_global: budgetGlobal,
@@ -1331,8 +1341,6 @@ app.put("/doctorants/:username/confirm", async (req, res) => {
   }
 });
 
-
-
 app.get("/doctorants/:username/status", async (req, res) => {
   const { username } = req.params;
   console.log("Request body:", req.params);
@@ -1353,7 +1361,7 @@ app.get("/doctorants/:username/status", async (req, res) => {
   }
 });
 
-//////////////////////////////////upload///////////////////////////////////////////////////////////
+//////////////////////////////////upload certificate///////////////////////////////////////////////////////////
 
 const multer = require("multer");
 
@@ -1368,24 +1376,15 @@ const storage = multer.diskStorage({
 });
 
 // Set up a route for file uploads
-app.post("/upload", upload.single("file"), (req, res) => {
+app.post("/upload", upload.single("certificat"), (req, res) => {
+  console.log(req.file);
   // Handle the uploaded file
+
   res.json({ message: "File uploaded successfully!" });
 });
 
-//////////////////affihcage des fichiers /////////////
-app.get("/uploadfile", (req, res) => {
-  const directoryPath = path.join(__dirname, "uploadfile");
-
-  fs.readdir(directoryPath, (err, files) => {
-    if (err) {
-      return res.status(500).send("Unable to scan files");
-    }
-    res.json(files);
-  });
-});
 /////////////////////////////add teahcer/////////////////////////////////////////////////////////////////////
-app.post('/addteacher', async (req, res) => {
+app.post("/addteacher", async (req, res) => {
   const {
     Username_NSS,
     Firstname_fr,
@@ -1402,17 +1401,17 @@ app.post('/addteacher', async (req, res) => {
     Departement,
     Email,
     Usthb,
-    Situation
+    Situation,
   } = req.body;
 
   try {
     // Vérifiez si l'enseignant existe déjà
     const existingTeacher = await Enseignants.findOne({
-      where: { Username_NSS }
+      where: { Username_NSS },
     });
 
     if (existingTeacher) {
-      return res.status(400).json({ error: 'Username_NSS already exists' });
+      return res.status(400).json({ error: "Username_NSS already exists" });
     }
 
     // Créez un nouvel enseignant
@@ -1432,13 +1431,13 @@ app.post('/addteacher', async (req, res) => {
       Departement,
       Email,
       Usthb,
-      Situation
+      Situation,
     });
 
     res.status(201).json(newTeacher);
   } catch (error) {
-    console.error('Error adding teacher:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error adding teacher:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1496,11 +1495,10 @@ app.delete("/deleteteacher/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-<<<<<<< HEAD
 
 /////////////////////////////add doctorant/////////////////////////////////////////////////////////////////////
 const { Doctorant } = require("./models");
-app.post('/adddoctorant', async (req, res) => {
+app.post("/adddoctorant", async (req, res) => {
   const {
     Username_Mat,
     Titre,
@@ -1541,67 +1539,67 @@ app.post('/adddoctorant', async (req, res) => {
     Departement,
     Usthb,
     President,
-    Promoteur
+    Promoteur,
   } = req.body;
 
   try {
     // Vérifiez si l'enseignant existe déjà
     const existingTeacher = await Doctorant.findOne({
-      where: { Username_Mat }
+      where: { Username_Mat },
     });
 
     if (existingTeacher) {
-      return res.status(400).json({ error: 'Username_NSS already exists' });
+      return res.status(400).json({ error: "Username_NSS already exists" });
     }
 
     // Créez un nouvel enseignant
     const newTeacher = await Doctorant.create({
       Username_Mat,
-    Titre,
-    Nom_fr,
-    Prenoms_fr,
-    Nom_ab,
-    Prenoms_ab,
-    Date_naiss,
-    Lieu_naiss,
-    Nationalit,
-    Statut,
-    Type_inscri,
-    Filiere,
-    Domaine,
-    Option,
-    Sexe,
-    Adresse,
-    Mail,
-    Org_employ,
-    Dip_acces,
-    Dat_obten,
-    Lieu_obten,
-    An_univer,
-    Gel,
-    Sujet,
-    Dir_these,
-    Grade_dir,
-    Lieu_exer,
-    Code_dir,
-    Grade_codir,
-    L_exer,
-    Cdir_these,
-    Labo,
-    D_labo,
-    Numero_telephone,
-    Grade,
-    Laboratoire,
-    Departement,
-    Usthb,
-    President,
-    Promoteur
+      Titre,
+      Nom_fr,
+      Prenoms_fr,
+      Nom_ab,
+      Prenoms_ab,
+      Date_naiss,
+      Lieu_naiss,
+      Nationalit,
+      Statut,
+      Type_inscri,
+      Filiere,
+      Domaine,
+      Option,
+      Sexe,
+      Adresse,
+      Mail,
+      Org_employ,
+      Dip_acces,
+      Dat_obten,
+      Lieu_obten,
+      An_univer,
+      Gel,
+      Sujet,
+      Dir_these,
+      Grade_dir,
+      Lieu_exer,
+      Code_dir,
+      Grade_codir,
+      L_exer,
+      Cdir_these,
+      Labo,
+      D_labo,
+      Numero_telephone,
+      Grade,
+      Laboratoire,
+      Departement,
+      Usthb,
+      President,
+      Promoteur,
     });
 
     res.status(201).json(newTeacher);
   } catch (error) {
-    console.error('Error adding teacher:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error adding teacher:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1659,7 +1657,7 @@ app.delete("/deletedoctorant/:id", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /////////////////////////////////////////////////////////////////GET Doctorant////////////////////////////////////////////////////////////////////////////////////
 app.get("/doctorants", async (req, res) => {
   try {
@@ -1671,48 +1669,41 @@ app.get("/doctorants", async (req, res) => {
   }
 });
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////// Get all SPE_doc/////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-app.get('/SPE/:Username', async (req, res) => {
+app.get("/SPE/:Username", async (req, res) => {
   const { Username } = req.params;
   try {
     // Find the binome id associated with the given Username
     const binome = await Binome_Comission.findOne({
       where: {
-        [Op.or]: [
-          { Username_NSS1: Username },
-          { Username_NSS2: Username }
-        ]
-      }
+        [Op.or]: [{ Username_NSS1: Username }, { Username_NSS2: Username }],
+      },
     });
 
     if (!binome) {
-      return res.status(404).json({ message: "Binome not found for the given Username" });
+      return res
+        .status(404)
+        .json({ message: "Binome not found for the given Username" });
     }
 
     // Fetch all SPE_doc records with the found id_Binome
     const doctorants = await SPE_doc.findAll({
       where: {
-        id_Binome: binome.id
-      }
+        id_Binome: binome.id,
+      },
     });
 
     res.json(doctorants);
   } catch (error) {
-    console.error('Error fetching SPE_doc data:', error);
-    res.status(500).send('Internal Server Error');
+    console.error("Error fetching SPE_doc data:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////Saisire la note plus l'affectation à un troisieme membre//////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 /*app.put('/updatSPE/:id', async (req, res) => {
   const { id } = req.params;
@@ -1731,7 +1722,7 @@ app.get('/SPE/:Username', async (req, res) => {
   }
 });*/
 
-app.put('/SPE/update/:id', async (req, res) => {
+app.put("/SPE/update/:id", async (req, res) => {
   const { id } = req.params;
   const { note } = req.body;
 
@@ -1747,7 +1738,6 @@ app.put('/SPE/update/:id', async (req, res) => {
       speDoc.Note2 = note;
       const diff = Math.abs(speDoc.Note1 - speDoc.Note2);
       // If both notes are assigned, calculate the final note
-    
 
       if (diff === 0) {
         speDoc.Note_finale = speDoc.Note1; // or Note2 since they are equal
@@ -1762,11 +1752,15 @@ app.put('/SPE/update/:id', async (req, res) => {
             const potentialMembers = await Membre_Commission.findAll({
               where: {
                 Username_NSS: {
-                  [Op.notIn]: [binome.Username_NSS1, binome.Username_NSS2, speDoc.Username_Mat]
-                }
-              }
+                  [Op.notIn]: [
+                    binome.Username_NSS1,
+                    binome.Username_NSS2,
+                    speDoc.Username_Mat,
+                  ],
+                },
+              },
             });
-            
+
             // Sélectionner un membre qui répond aux critères
             if (potentialMembers.length > 0) {
               const selectedMember = potentialMembers[0];
@@ -1775,8 +1769,9 @@ app.put('/SPE/update/:id', async (req, res) => {
           } catch (error) {
             console.error("Error fetching potential members:", error);
           }
-      }}}
-      else {
+        }
+      }
+    } else {
       speDoc.Note_finale = note;
       await speDoc.save();
       return res.status(200).json(speDoc);
@@ -1811,25 +1806,15 @@ app.put('/SPE/update/:id', async (req, res) => {
     await speDoc.save();
     res.status(200).json(speDoc);
   } catch (error) {
-    console.error('Error updating SPE_doc:', error);
-    res.status(500).send('Internal Server Error');
+    console.error("Error updating SPE_doc:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
-=======
 ////////////////////////////////////////////ajouter certificat////////////////////////////////////////////
 
 const router = express.Router(); // Assurez-vous que le modèle est correctement importé
-const storage1 = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "./certificate/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-const upload1 = multer({ storage1: storage });
 
-app.post("/demande_SPe", upload1.single("file"), async (req, res) => {
+app.post("/demande_SPe", upload.single("certificat"), async (req, res) => {
   const {
     Username_Mat,
     Pays,
@@ -1838,9 +1823,7 @@ app.post("/demande_SPe", upload1.single("file"), async (req, res) => {
     Date_dep,
     Date_retour,
     Periode_Stage,
-    Annee,
   } = req.body;
-  const certificatFile = req.file;
   console.log("Username_Mat:", Username_Mat);
   console.log("Pays:", Pays);
   console.log("Ville:", Ville);
@@ -1849,20 +1832,14 @@ app.post("/demande_SPe", upload1.single("file"), async (req, res) => {
   console.log("Annee:", Annee);
   console.log("Date_dep:", Date_dep);
   console.log("Date_retour:", Date_retour);
-  console.log("Certificat File:", certificatFile);
-  console.log("Données reçues:", req.body); // Ajoutez cette ligne pour voir les données reçues
-  console.log("Fichier reçu:", certificatFile); // Ajoutez cette ligne pour voir les détails du fichier reçu
 
   if (
     !Username_Mat ||
     !Pays ||
-    !Ville ||
     !Etablissement_acc ||
     !Periode_Stage ||
-    !Annee ||
     !Date_dep ||
-    !Date_retour ||
-    !certificatFile
+    !Date_retour
   ) {
     return res.status(400).json({ error: "All fields are required." });
   }
@@ -1886,7 +1863,7 @@ app.post("/demande_SPe", upload1.single("file"), async (req, res) => {
       Date_retour,
       Periode_Stage,
       Annee,
-      Certificat: certificatFile.path,
+      Certificat: req.file.filename,
     });
 
     return res
@@ -1942,4 +1919,208 @@ app.post("/demande/affectation", async (req, res) => {
     res.status(500).json({ error: "Failed to validate demande" });
   }
 });
->>>>>>> 4f0d013147667087f4d27dff33cb054a34766364
+
+/////////////////////////////////////////année////////////////////////////////////////////////////////////////////////
+app.get("/annee", async (req, res) => {
+  try {
+    const annees = await Annee.findAll();
+    res.json(annees);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch data" });
+  }
+});
+
+app.post("/annee", async (req, res) => {
+  // Changed path from /annee/post to /annee
+  try {
+    const { Annee: year, Budget_global, Historique } = req.body;
+    const pourcentageEns = 0.5;
+    const pourcentageDoc = 0.4;
+    const budgetEns = Budget_global * pourcentageEns;
+    const budgetDoc = Budget_global * pourcentageDoc;
+
+    const annee = await Annee.create({
+      Annee: year,
+      Budget_global: Budget_global,
+      Budget_ens: budgetEns,
+      Budget_doc: budgetDoc,
+      Historique: Historique,
+    });
+    res.json(annee);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create data" });
+  }
+});
+
+app.put("/annee/:id", async (req, res) => {
+  // Changed path from /annee/update/:id to /annee/:id
+  try {
+    const { id } = req.params;
+    const { Annee: year, Budget_global, Historique } = req.body;
+    const pourcentageEns = 0.5;
+    const pourcentageDoc = 0.4;
+    const budgetEns = Budget_global * pourcentageEns;
+    const budgetDoc = Budget_global * pourcentageDoc;
+
+    await Annee.update(
+      {
+        Annee: year,
+        Budget_global: Budget_global,
+        Budget_ens: budgetEns,
+        Budget_doc: budgetDoc,
+        Historique: Historique,
+      },
+      {
+        where: { id },
+      }
+    );
+    res.json({ message: "Annee updated" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update data" });
+  }
+});
+
+app.delete("/annee/:id", async (req, res) => {
+  // Changed path from /annee/delete/:id to /annee/:id
+  try {
+    const { id } = req.params;
+    await Annee.destroy({ where: { id } });
+    res.json({ message: "Annee deleted" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete data" });
+  }
+});
+//////////////////////////////////////////////////////////////// Get all SPE_doc  pour CSF/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/CSF", async (req, res) => {
+  const { Username } = req.params;
+  try {
+    // Fetch all SPE_doc records with the found id_Binome
+    const doctorants = await SPE_doc.findAll();
+
+    res.json(doctorants);
+  } catch (error) {
+    console.error("Error fetching SPE_doc data:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////Saisire la Decision du CSF pour SPE//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.put("/SPE/CSF/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { Decision } = req.body;
+
+  try {
+    // Recherchez le doctorant par son ID
+    const doctorant = await SPE_doc.findByPk(id);
+    if (!doctorant) {
+      return res.status(404).json({ message: "Doctorant not found" });
+    }
+
+    // Mettez à jour la décision du doctorant
+    const decisionValue = Decision === "Accepté" ? "true" : "false";
+    await doctorant.update({ Decision: decisionValue });
+
+    // Réponse avec le doctorant mis à jour
+    return res.status(200).json(doctorant);
+  } catch (error) {
+    console.error("Error updating doctorant:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+//////////////////////////////////////////
+
+app.use("/uploadfile/:file", (req, res, next) => {
+  const fileName = req.params.file;
+  if (!fileName) {
+    return res.status(400).send("File name is required");
+  }
+
+  const filePath = path.join(__dirname, "uploadfile", fileName);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      next(err);
+    } else {
+      console.log(`Sent: ${fileName}`);
+    }
+  });
+});
+///////////////////////////////////////////////ajouter dossier//////////////////////////////////////////////
+app.put("/demande_SPe2", upload.single("certificat"), async (req, res) => {
+  const { Username_Mat } = req.body;
+  console.log("Username_Mat:", Username_Mat);
+
+  if (!req.file) {
+    return res.status(400).json({ error: "Certificat file is required." });
+  }
+
+  try {
+    const existingDemande = await db.SPE_doc.findOne({
+      where: { Username_Mat },
+    });
+
+    if (existingDemande) {
+      try {
+        await db.SPE_doc.update(
+          { Document: req.file.filename },
+          { where: { Username_Mat } }
+        );
+        return res
+          .status(200)
+          .json({ message: "Dossier updated successfully." });
+      } catch (error) {
+        console.error("Error updating demande:", error);
+        return res.status(500).json({ error: "Failed to update demande" });
+      }
+    } else {
+      return res.status(404).json({ error: "Demande not found in SPE table" });
+    }
+  } catch (error) {
+    console.error(
+      "Erreur lors de l'ajout de la demande dans la table SPE :",
+      error
+    );
+    return res
+      .status(500)
+      .json({ error: "Échec de l'ajout de la demande dans la table SPE" });
+  }
+});
+//////////////////////////////////////////delete all binome /////////////////////////////////////////////////
+app.delete("/delete_all_binome_comission", async (req, res) => {
+  try {
+    await Binome_Comission.destroy({
+      where: {},
+      truncate: true,
+    });
+    await Membre_Commission.destroy({
+      where: {},
+      truncate: true,
+    });
+    res.status(200).json({
+      message: "All records in Binome_Comission table have been deleted.",
+    });
+  } catch (error) {
+    console.error("Error deleting records:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to delete records in Binome_Comission table." });
+  }
+});
+////////////////////////////////////////les enseignant/////////////////////////////////////////////////////
+router.get("/enseignants_participants", async (req, res) => {
+  try {
+    const participants = await Enseignant.findAll({
+      where: { Est_participe: "true" },
+    });
+    res.status(200).json(participants);
+  } catch (error) {
+    console.error("Error fetching participants:", error);
+    res.status(500).json({ error: "Failed to fetch participants" });
+  }
+});
+
+module.exports = router;

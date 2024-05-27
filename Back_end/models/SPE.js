@@ -45,6 +45,7 @@ module.exports = (sequelize) => {
     Decision: {
       type: DataTypes.ENUM("true", "false"),
       defaultValue: "false",
+      allowNull: true,
     },
     Username_NSS3: {
       type: DataTypes.STRING(100),
@@ -70,23 +71,6 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    id_Binome: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    }
   });
-  sequelize
-    .sync({ force: true })
-    .then(() => {
-      console.log(
-        "La base de données a été reconstruite (toutes les tables ont été supprimées et recréées)."
-      );
-    })
-    .catch((err) => {
-      console.error(
-        "Erreur lors de la synchronisation de la base de données:",
-        err
-      );
-    });
   return SPE_doc;
 };
