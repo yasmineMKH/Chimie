@@ -21,10 +21,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    isConfirmed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     Password: {
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     Dateajout: {
       type: DataTypes.DATE,
       allowNull: false,

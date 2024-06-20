@@ -91,6 +91,146 @@ app.post("/login", async (req, res) => {
   }
 });
 
+/*
+app.post("/login", async (req, res) => {
+  const userData = req.body;
+  try {
+    const existingUser = await db.User.findOne({
+      where: {
+        Username: userData.Username,
+      },
+    });
+
+    if (existingUser) {
+      if (!existingUser.isConfirmed) {
+        return res
+          .status(403)
+          .json({ message: "Account not confirmed by admin" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(
+        userData.Password,
+        existingUser.Password
+      );
+
+      console.log("pass:", req.params);
+      if (isPasswordValid) {
+        return res.status(200).json({
+          message: "Login successful",
+          id: existingUser.id,
+          Role: existingUser.Role,
+        });
+      } else {
+        return res.status(401).json({ message: "Invalid password" });
+      }
+    } else {
+      return res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Login error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});*/
+
+////////////////////////////////////////////////confirmer le user/////////////////////////////////////
+app.patch("/confirm_User/:id", async (req, res) => {
+  try {
+    const user = await db.User.findByPk(req.params.id);
+    if (user) {
+      user.isConfirmed = true;
+      await user.save();
+      return res.status(200).json({ message: "User confirmed successfully" });
+    } else {
+      return res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Error confirming user:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+/////////////////////////////////////////////update user/////////////////////////////////////////////
+app.get("/users/:id", async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    // Rechercher le super_user dans la base de données
+    const user = await db.User.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: " user not found" });
+    }
+
+    // Envoyer les données du  user trouvé
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching  user data:", error);
+    return res.status(500).json({ error: "Failed to fetch  user data" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////// Route pour mettre à jour les données d'un user/////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.put("/users/edit/:id", async (req, res) => {
+  const userId = req.params.id;
+  const updatedData = req.body;
+
+  try {
+    // Vérifier si le super_user existe dans la base de données
+    const existingUser = await db.User.findByPk(userId);
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    if (updatedData.Role === "Enseignant") {
+      // Vérifier si un enseignant existe avec les nouvelles informations
+      const existingTeacher = await db.Enseignants.findOne({
+        where: {
+          Firstname_fr: updatedData.Firstname,
+          Lastname_fr: updatedData.Lastname,
+          Username_NSS: updatedData.Username,
+        },
+      });
+
+      if (!existingTeacher) {
+        return res.status(400).json({ error: "user is not an enseignant" });
+      }
+    } else if (updatedData.Role === "Doctorant") {
+      // Vérifier si un super user existe déjà avec le même username ou email
+      const existingStudent = await db.Enseignants.findOne({
+        where: {
+          Firstname_fr: updatedData.Firstname,
+          Lastname_fr: updatedData.Lastname,
+          Username_Mat: updatedData.Username,
+        },
+      });
+
+      if (!existingStudent) {
+        return res.status(400).json({ error: "user is not an student" });
+      }
+    } else {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    // Si un nouveau mot de passe est fourni, le hacher
+    if (updatedData.Password) {
+      const hashedPassword = await bcrypt.hash(updatedData.Password, 10);
+      updatedData.Password = hashedPassword;
+    }
+
+    // Mettre à jour les données du super user
+    await existingUser.update(updatedData);
+
+    return res.status(200).json({ message: "Super user updated successfully" });
+  } catch (error) {
+    console.error("Error updating super user:", error);
+    return res.status(500).json({ error: "Failed to update super user" });
+  }
+});
+
 ////////////////////////////////////////////////////////Affichage des Users pour l'admin/////////////////////////////////////////////////////////////////////////////
 
 // Import the User model
@@ -597,6 +737,59 @@ app.post("/Registration", async (req, res) => {
     return res.status(500).json({ error: "Failed to register user" });
   }
 });
+/*app.post("/Registration", async (req, res) => {
+  const userData = req.body;
+  console.log("Request body:", req.body);
+
+  try {
+    // Vérifier si l'utilisateur existe déjà dans la base de données
+    let existingUser = await db.User.findOne({
+      where: {
+        [Op.or]: [{ Username: userData.Username }, { Email: userData.Email }],
+      },
+    });
+    console.log("existingUser:", existingUser);
+    if (existingUser) {
+      // Si l'utilisateur existe déjà, renvoyer un message d'erreur
+      return res.status(400).json({ error: "User already exists" });
+    } else {
+      let target = null;
+
+      // Chercher dans la table des enseignants ou doctorants
+      if (userData.Role === "Enseignant") {
+        target = await db.Enseignants.findOne({
+          where: { Username_NSS: userData.Username },
+        });
+      } else if (userData.Role === "Doctorant") {
+        target = await db.Doctorant.findOne({
+          where: { Username_Mat: userData.Username },
+        });
+      } else {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+
+      console.log("target:", target);
+      if (target) {
+        const hashedPassword = await bcrypt.hash(userData.Password, 10);
+        let newUser = await db.User.create({
+          ...userData,
+          Password: hashedPassword,
+          isConfirmed: false,
+        });
+
+        await target.update({ Etat_compte: true });
+
+        return res.status(201).json(newUser);
+      } else {
+        return res.status(400).json({
+          error: "Username not found in Enseignant or Doctorant table",
+        });
+      }
+    }
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to register user" });
+  }
+});*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -927,10 +1120,10 @@ app.post("/:Username/demande_SPE", async (req, res) => {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////check Décision SPE///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-app.get("/doctorants/:username/decision", async (req, res) => {
-  const { username } = req.params;
+app.get("/doctorants/:Username/decision", async (req, res) => {
+  const { Username } = req.params;
   try {
-    const docSpe = await SPE_doc.findOne({ where: { Username_Mat: username } });
+    const docSpe = await SPE_doc.findOne({ where: { Username_Mat: Username } });
 
     if (!docSpe) {
       return res
@@ -938,8 +1131,12 @@ app.get("/doctorants/:username/decision", async (req, res) => {
         .send({ message: "No record found for the given username" });
     }
 
+    console.log("SPE_doc:", docSpe);
     const decisionMessage =
-      SPE_doc.Decision === "true" ? "Accepté" : "Pas encore accepté";
+      docSpe.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    console.log("SPE_doc.Decision:", docSpe.Decision);
+    console.log("decisionMessage:", decisionMessage);
+
     res.status(200).send({ message: decisionMessage });
   } catch (error) {
     console.error("Error checking decision:", error);
@@ -1090,6 +1287,18 @@ app.post("/binome_comission/create", async (req, res) => {
         Type_traitement: typeTraitement,
       });
 
+      await Membre_Commission.update(
+        { id_Binome: binome1.id },
+        {
+          where: {
+            Username_NSS: [
+              enseignants[i].Username_NSS,
+              enseignants[i + 1].Username_NSS,
+            ],
+          },
+        }
+      );
+
       // Incrémenter le compteur des enseignants traités
       enseignantsTraites += 2;
     }
@@ -1167,6 +1376,26 @@ app.get("/check_commission_membership/:username", async (req, res) => {
 
     // Retourner la réponse
     res.json({ isMember: !!isMember });
+  } catch (error) {
+    console.error("Failed to check commission membership:", error);
+    res.status(500).json({ error: "Failed to check commission membership" });
+  }
+});
+
+app.get("/check_commission_President/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Vérifier si l'utilisateur est membre de la commission
+    const isPresident = await db.Membre_Commission.findOne({
+      where: {
+        Username_NSS: username,
+        Président: true,
+      },
+    });
+
+    // Retourner la réponse
+    res.json({ isPresident: !!isPresident });
   } catch (error) {
     console.error("Failed to check commission membership:", error);
     res.status(500).json({ error: "Failed to check commission membership" });
@@ -1540,6 +1769,7 @@ app.post("/adddoctorant", async (req, res) => {
     Usthb,
     President,
     Promoteur,
+    CLE,
   } = req.body;
 
   try {
@@ -1594,6 +1824,7 @@ app.post("/adddoctorant", async (req, res) => {
       Usthb,
       President,
       Promoteur,
+      CLE,
     });
 
     res.status(201).json(newTeacher);
@@ -1813,7 +2044,7 @@ app.put("/SPE/update/:id", async (req, res) => {
 ////////////////////////////////////////////ajouter certificat////////////////////////////////////////////
 
 const router = express.Router(); // Assurez-vous que le modèle est correctement importé
-
+/*
 app.post("/demande_SPe", upload.single("certificat"), async (req, res) => {
   const {
     Username_Mat,
@@ -1863,6 +2094,84 @@ app.post("/demande_SPe", upload.single("certificat"), async (req, res) => {
       Date_retour,
       Periode_Stage,
       Annee,
+      Certificat: req.file.filename,
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Demande ajoutée avec succès dans la table SPE" });
+  } catch (error) {
+    console.error(
+      "Erreur lors de l'ajout de la demande dans la table SPE :",
+      error
+    );
+    return res
+      .status(500)
+      .json({ error: "Échec de l'ajout de la demande dans la table SPE" });
+  }
+});*/
+app.post("/demande_SPe", upload.single("certificat"), async (req, res) => {
+  const {
+    Username_Mat,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+  } = req.body;
+
+  console.log("Username_Mat:", Username_Mat);
+  console.log("Pays:", Pays);
+  console.log("Ville:", Ville);
+  console.log("Etablissement_acc:", Etablissement_acc);
+  console.log("Periode_Stage:", Periode_Stage);
+  console.log("Date_dep:", Date_dep);
+  console.log("Date_retour:", Date_retour);
+
+  if (
+    !Username_Mat ||
+    !Pays ||
+    !Etablissement_acc ||
+    !Periode_Stage ||
+    !Date_dep ||
+    !Date_retour
+  ) {
+    return res.status(400).json({ error: "All fields are required." });
+  }
+
+  try {
+    // Check if the doctorant is "Inscrit"
+    const doctorant = await db.Doctorant.findOne({ where: { Username_Mat } });
+    if (!doctorant) {
+      return res
+        .status(400)
+        .json({ error: "Doctorant not found in Doctorants table" });
+    }
+
+    if (doctorant.CLE !== "Inscrit") {
+      return res.status(400).json({ error: "Doctorant is not 'Inscrit'" });
+    }
+
+    // Check if a demande already exists in the SPE table
+    const existingDemande = await db.SPE_doc.findOne({
+      where: { Username_Mat },
+    });
+    if (existingDemande) {
+      return res
+        .status(400)
+        .json({ error: "Demande already exists in SPE table" });
+    }
+
+    // Create new entry in the SPE_doc table
+    await db.SPE_doc.create({
+      Username_Mat,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
       Certificat: req.file.filename,
     });
 
@@ -2124,3 +2433,1450 @@ router.get("/enseignants_participants", async (req, res) => {
 });
 
 module.exports = router;
+
+///////////////////////////////add user///////////////////////////////////////////////////////////////
+app.post("/add_User", async (req, res) => {
+  const { Firstname, Lastname, Username, Role, Email, Password } = req.body;
+
+  try {
+    // Vérifiez si le Username existe déjà dans la table Enseignant ou Doctorant
+    const enseignantExists = await db.Enseignants.findOne({
+      where: { Username_NSS: Username },
+    });
+    const doctorantExists = await db.Doctorant.findOne({
+      where: { Username_Mat: Username },
+    });
+
+    if (enseignantExists || doctorantExists) {
+      const hashedPassword = await bcrypt.hash(Password, 10);
+      const newUser = await User.create({
+        Firstname,
+        Lastname,
+        Username,
+        Role,
+        Email,
+        Password: hashedPassword,
+      });
+      res.status(201).json(newUser);
+    }
+  } catch (error) {
+    console.error("Error adding user:", error);
+    res.status(500).json({ error: "Failed to add user" });
+  }
+});
+
+////////////////////////////////////////////// DEMANDE MSI1 /////////////////////////////////////////////////////////////////////////////////////////////////////
+const { Destination } = require("./models");
+const { MSI } = require("./models");
+/////////////////////////////////////////////SAISIR DESTINATION//////////////////////////////////////
+app.post("/Destination", async (req, res) => {
+  const {
+    Username_NSS,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+    Theme_communication,
+    Theme_rencontre,
+    frais,
+  } = req.body;
+  console.log(`Selected member from all types:`, req.body);
+
+  try {
+    // Check if Username_NSS exists in the enseignants table
+    const enseignant = await Enseignants.findOne({ where: { Username_NSS } });
+    if (!enseignant) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS not found in enseignants table" });
+    }
+
+    // Check if the enseignant's situation is "En poste"
+    if (enseignant.Situation !== "En poste") {
+      return res
+        .status(400)
+        .json({ error: "Enseignant is not currently 'En poste'" });
+    }
+
+    // Check if Username_NSS is already used 4 times in the Destination table
+    const count = await Destination.count({ where: { Username_NSS } });
+    if (count >= 4) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS has already been used 4 times" });
+    }
+
+    // Check if Username_NSS exists in the SSHN table
+    const existingSSHN = await SSHN.findOne({ where: { Username_NSS } });
+    if (existingSSHN) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS already exists in SSHN table" });
+    }
+
+    // Create new entry in the Destination table
+    await Destination.create({
+      Username_NSS,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+      Theme_communication,
+      Theme_rencontre,
+      frais,
+    });
+
+    res.status(201).json({ message: "Record added successfully" });
+  } catch (error) {
+    console.error("Error inserting record:", error);
+    res.status(500).json({ error: "Failed to add record" });
+  }
+});
+
+/////////////////////////////////////AFFICHER LES DESTINATION DE L'UTILISATEUR////////////////////////
+app.get("/destinations/:username", async (req, res) => {
+  const { username } = req.params;
+  try {
+    const destinations = await Destination.findAll({
+      where: { Username_NSS: username },
+    });
+    res.status(200).json(destinations);
+  } catch (error) {
+    console.error("Error fetching destinations:", error);
+    res.status(500).json({ error: "Failed to fetch destinations" });
+  }
+});
+
+////////////////////////////AJOUTER LA DESTINATION DANS LA TABLE MSI//////////////////////////////////////////////
+app.post("/msi", async (req, res) => {
+  const {
+    Username_NSS,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+    Theme_communication,
+    Theme_rencontre,
+    frais,
+  } = req.body;
+
+  try {
+    // Check if Username_NSS is already used in the MSI table
+    const count = await MSI.count({ where: { Username_NSS } });
+    if (count >= 1) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS already has a destination in MSI" });
+    }
+
+    // Create new entry in the MSI table
+    await MSI.create({
+      Username_NSS,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+      Theme_communication,
+      Theme_rencontre,
+      frais,
+    });
+
+    res.status(201).json({ message: "Record added to MSI successfully" });
+  } catch (error) {
+    console.error("Error adding to MSI:", error);
+    res.status(500).json({ error: "Failed to add record to MSI" });
+  }
+});
+////////////////////////////////////////AJOUTER LA DESTINATION DANS LA TABLE MSI avec document///////////////////////////////
+
+app.post("/msi2", upload.single("certificat"), async (req, res) => {
+  console.log("File received:", req.file);
+  console.log("Request body:", req.body);
+  const {
+    Username_NSS,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+    Theme_communication,
+    Theme_rencontre,
+    frais,
+  } = req.body;
+  console.log("Username_Mat:", Username_NSS);
+  console.log("Pays:", Pays);
+  console.log("Ville:", Ville);
+  console.log("Etablissement_acc:", Etablissement_acc);
+  console.log("Periode_Stage:", Periode_Stage);
+  console.log("Theme_communication:", Theme_communication);
+  console.log("Theme_rencontre:", Theme_rencontre);
+  console.log("frais:", frais);
+  console.log("Uploaded file:", req.file);
+  try {
+    // Check if Username_NSS is already used in the MSI table
+    const count = await MSI.count({ where: { Username_NSS } });
+    if (count >= 1) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS already has a destination in MSI" });
+    }
+
+    await MSI.create({
+      Username_NSS,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+      Theme_communication,
+      Theme_rencontre,
+      frais,
+      Document: req.file.filename,
+    });
+
+    res.status(201).json({ message: "Record added to MSI successfully" });
+  } catch (error) {
+    console.error("Error adding to MSI:", error);
+    res.status(500).json({ error: "Failed to add record to MSI" });
+  }
+});
+/////////////////////////////////////////////DEMANDE SSHN1 /////////////////////////////////////////////////////////////////////////////////////////////////////
+const { SSHN } = require("./models");
+//////////////////////////////////////////SAISIR DEMANDE SSHN1/////////////////////////////////////////////
+app.post("/add/SSHN", async (req, res) => {
+  const {
+    Username_NSS,
+    Pays,
+    Ville,
+    Etablissement_acc,
+    Date_dep,
+    Date_retour,
+    Periode_Stage,
+  } = req.body;
+
+  try {
+    // Check if Username_NSS exists in the Enseignants table
+    const enseignant = await Enseignants.findOne({ where: { Username_NSS } });
+    if (!enseignant) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS not found in Enseignants table" });
+    }
+
+    // Check if the enseignant's situation is "En poste"
+    if (enseignant.Situation !== "En poste") {
+      return res
+        .status(400)
+        .json({ error: "Enseignant is not currently 'En poste'" });
+    }
+
+    // Check if Username_NSS exists in the Destination table
+    const countDestinations = await Destination.count({
+      where: { Username_NSS },
+    });
+    if (countDestinations > 1) {
+      return res.status(400).json({
+        error:
+          "Username_NSS already exists more than once in Destination table",
+      });
+    }
+
+    // Check if Username_NSS exists in the MSI table
+    const existingMSI = await MSI.findOne({ where: { Username_NSS } });
+    if (existingMSI) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS already exists in MSI table" });
+    }
+
+    // Check if Username_NSS exists in the SSHN table
+    const existingSSHN = await SSHN.findOne({ where: { Username_NSS } });
+    if (existingSSHN) {
+      return res
+        .status(400)
+        .json({ error: "Username_NSS already exists in SSHN table" });
+    }
+
+    // Create new entry in the SSHN table
+    await SSHN.create({
+      Username_NSS,
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+    });
+
+    res.status(201).json({ message: "Record added successfully" });
+  } catch (error) {
+    console.error("Error inserting record:", error);
+    res.status(500).json({ error: "Failed to add record" });
+  }
+});
+////////////////////////////////afficher la demande pour la deuxieme etape////////////////////////////////
+app.get("/SSHN/:Username_NSS", async (req, res) => {
+  const { Username_NSS } = req.params;
+  try {
+    const demande = await SSHN.findOne({ where: { Username_NSS } });
+    if (!demande) {
+      return res.status(404).json({ error: "Demande not found" });
+    }
+    res.status(200).json(demande);
+  } catch (error) {
+    console.error("Error fetching demande:", error);
+    res.status(500).json({ error: "Failed to fetch demande" });
+  }
+});
+
+//////////////////////////////////////////////////////////Mettre à jour une demande SSHN par Username_NSS et ajouter les document/////////////
+/*app.put(
+  "/SSHN/:Username_NSS",
+  upload.single("certificat"),
+  async (req, res) => {
+    console.log(req.body);
+    const { Username_NSS } = req.params;
+    const updatedDemande = req.body;
+    try {
+      const demande = await SSHN.findOne({ where: { Username_NSS } });
+      if (!demande) {
+        return res.status(404).json({ error: "Demande not found" });
+      }
+      await demande.update({ Document: req.file.filename, updatedDemande });
+
+      res.status(200).json({ message: "Demande updated successfully" });
+    } catch (error) {
+      console.error("Error updating demande:", error);
+      res.status(500).json({ error: "Failed to update demande" });
+    }
+  }
+);*/
+app.put(
+  "/SSHN/:Username_NSS",
+  upload.single("certificat"),
+  async (req, res) => {
+    console.log(req.body);
+    const { Username_NSS } = req.params;
+    const {
+      Pays,
+      Ville,
+      Etablissement_acc,
+      Date_dep,
+      Date_retour,
+      Periode_Stage,
+    } = req.body;
+
+    try {
+      const demande = await SSHN.findOne({ where: { Username_NSS } });
+      if (!demande) {
+        return res.status(404).json({ error: "Demande not found" });
+      }
+
+      await demande.update({
+        Pays,
+        Ville,
+        Etablissement_acc,
+        Date_dep,
+        Date_retour,
+        Periode_Stage,
+        Document: req.file.filename,
+      });
+
+      res.status(200).json({ message: "Demande updated successfully" });
+    } catch (error) {
+      console.error("Error updating demande:", error);
+      res.status(500).json({ error: "Failed to update demande" });
+    }
+  }
+);
+///////////////////////////////////////////////////////////afficher MSI////////////////////////////////////////////////////////////////////
+app.get("/demande_MSI", async (req, res) => {
+  try {
+    const demandesMSI = await MSI.findAll();
+    const demandesSSHN = await SSHN.findAll();
+
+    // Combine the results
+    const result = {
+      demandesMSI,
+      demandesSSHN,
+    };
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+////////////////////////////////////////////////////////////binomes qui traitent les enseignants////////////////////////////////////////////
+app.get("/binomes_ens", async (req, res) => {
+  try {
+    const binomes = await Binome_Comission.findAll({
+      where: {
+        Type_traitement: "traitement_enseignant",
+      },
+    });
+    res.json(binomes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch binomes" });
+  }
+});
+///////////////////////////////////////////////////////////affectation des dossier MSI/////////////////////////////////////////////////////
+/*app.post("/demande/affectation_MSI", async (req, res) => {
+  const { id, id_Binome } = req.body;
+  try {
+    await MSI.update({ id_Binome }, { where: { id } });
+    res.status(200).json({ message: "Demande validée avec succès" });
+  } catch (error) {
+    console.error("Error validating demande:", error);
+    res.status(500).json({ error: "Failed to validate demande" });
+  }
+});*/
+app.post("/demande/affectation", async (req, res) => {
+  const { id, id_binome, Username_Nss1, Username_Nss2 } = req.body;
+  try {
+    if (id.startsWith("MSI-")) {
+      await MSI.update(
+        { id_Binome: id_binome },
+        { where: { id: id.replace("MSI-", "") } }
+      );
+    } else if (id.startsWith("SSHN-")) {
+      await SSHN.update(
+        { id_Binome: id_binome, Username_Nss1, Username_Nss2 },
+        { where: { id: id.replace("SSHN-", "") } }
+      );
+    }
+    res.status(200).json({ message: "Demande validée avec succès" });
+  } catch (error) {
+    console.error("Error validating demande:", error);
+    res.status(500).json({ error: "Failed to validate demande" });
+  }
+});
+
+app.post("/demande/affectation_MSI", async (req, res) => {
+  const { id, id_binome } = req.body;
+  try {
+    await MSI.update({ id_Binome: id_binome }, { where: { id } });
+    res.status(200).json({ message: "Demande MSI validée avec succès" });
+  } catch (error) {
+    console.error("Error validating MSI demande:", error);
+    res.status(500).json({ error: "Failed to validate MSI demande" });
+  }
+});
+
+app.post("/demande/affectation_SSHN", async (req, res) => {
+  console.log(req);
+  const { id, id_binome, Username_Nss1, Username_Nss2 } = req.body;
+  try {
+    await SSHN.update({ id_Binome: id_binome }, { where: { id } });
+    res.status(200).json({ message: "Demande SSHN validée avec succès" });
+  } catch (error) {
+    console.error("Error validating SSHN demande:", error);
+    res.status(500).json({ error: "Failed to validate SSHN demande" });
+  }
+});
+///////////////////////////////////////////////////////////afficher SSHN////////////////////////////////////////////////////////////////////
+app.get("/demande_SSHN", async (req, res) => {
+  try {
+    const demandes = await SSHN.findAll();
+    res.json(demandes);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+///////////////////////////////////////////////////////////affectation des dossier MSI/////////////////////////////////////////////////////
+/*app.post("/demande/affectation_SSHN1", async (req, res) => {
+  const { id, id_Binome } = req.body;
+  try {
+    await MSI.update({ id_Binome }, { where: { id } });
+    res.status(200).json({ message: "Demande validée avec succès" });
+  } catch (error) {
+    console.error("Error validating demande:", error);
+    res.status(500).json({ error: "Failed to validate demande" });
+  }
+});*/
+/////////////////////////////////////////////////////////////check Décision SPE///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get("/doctorants/:username/decision", async (req, res) => {
+  const { username } = req.params;
+  try {
+    const docSpe = await SPE_doc.findOne({ where: { Username_Mat: username } });
+
+    if (!docSpe) {
+      return res
+        .status(404)
+        .send({ message: "No record found for the given username" });
+    }
+
+    const decisionMessage =
+      SPE_doc.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    res.status(200).send({ message: decisionMessage });
+  } catch (error) {
+    console.error("Error checking decision:", error);
+    res.status(500).send({ error: "Failed to check decision" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////Annuler demande SPE//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.put("/doctorants/:username/cancel", async (req, res) => {
+  const { username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    // Mettre à jour la base de données pour annuler la participation
+    await db.Doctorant.update(
+      { Est_participe: "false" },
+      { where: { Username_Mat: username } }
+    );
+
+    // Supprimer la ligne correspondante dans la table SPE_doc
+    await SPE_doc.destroy({ where: { Username_Mat: username } });
+
+    res.status(200).send({ message: "Participation canceled successfully" });
+  } catch (error) {
+    console.error("Error canceling participation:", error);
+    res.status(500).send({ error: "Failed to cancel participation" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Recours//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.post("/:Username/recours_SPE", async (req, res) => {
+  const { Username } = req.params;
+  const { Commentaire } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe dans la table SPE_doc
+    const existingUserInSPE = await SPE_doc.findOne({
+      where: { Username_Mat: Username },
+    });
+
+    if (!existingUserInSPE) {
+      return res
+        .status(404)
+        .json({ error: "L'utilisateur n'existe pas dans la table SPE_doc." });
+    }
+
+    // Vérifier si un recours existe déjà pour cet utilisateur et ce type de demande
+    const existingRecours = await Recours.findOne({
+      where: {
+        Username: Username,
+        TypeDemande: "Stage de perfectionnement à l’étranger",
+      },
+    });
+
+    if (existingRecours) {
+      return res.status(400).json({
+        error:
+          "Un recours existe déjà pour ce type de demande et cet utilisateur.",
+      });
+    }
+
+    // Ajouter la demande dans la table Recours
+    await Recours.create({
+      Username: Username,
+      Commentaire,
+      TypeDemande: "Stage de perfectionnement à l’étranger", // Ajouter TypeDemande directement ici
+    });
+
+    return res.status(201).json({ message: "Recours ajouté avec succès" });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du recours SPE :", error);
+    return res.status(500).json({ error: "Échec de l'ajout du recours SPE" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////// vérifier ouverture session Recours//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/session/recours/is_open", async (req, res) => {
+  try {
+    // Recherche de la session correspondant à l'utilisateur spécifié
+    const session = await Session.findOne({
+      where: {
+        Nom_S: "Recours", // Nom de la session à vérifier
+      },
+    });
+
+    // Vérifier si la session existe et si elle est ouverte
+    const isSessionOpen = session.Est_ouverte === "true" ? true : false;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Vérifier ouverture sesion SPE//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/session/is_open_stage_perfectionnement", async (req, res) => {
+  try {
+    // Recherche de la session "Stage de perfectionnement à l’étrangé"
+    const sessionStagePerfectionnement = await Session.findOne({
+      where: {
+        Nom_S: "Stage de perfectionnement à l’étrangé",
+      },
+    });
+
+    // Recherche de la session "Recours"
+    const sessionCSF = await Session.findOne({
+      where: {
+        Nom_S: "Session CSF",
+      },
+    });
+
+    // Vérifier si la session "Stage de perfectionnement à l’étrangé" est ouverte
+    const isStageSessionOpen =
+      sessionStagePerfectionnement &&
+      sessionStagePerfectionnement.Est_ouverte === "true";
+
+    // Vérifier si la session "Recours" est fermée
+    const isCSFSessionClosed = sessionCSF && sessionCSF.Est_ouverte === "false";
+
+    // Si les deux conditions sont vérifiées, isSessionOpen sera true, sinon false
+    const isSessionOpen = isStageSessionOpen && isCSFSessionClosed;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+/////////////////////////////////////////////////////////////check Décision MSI///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get("/MSI/:Username/decision", async (req, res) => {
+  const { Username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    const docSpe = await MSI.findOne({ where: { Username_NSS: Username } });
+
+    if (!docSpe) {
+      return res
+        .status(404)
+        .send({ message: "No record found for the given username" });
+    }
+
+    const decisionMessage =
+      docSpe.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    res.status(200).send({ message: decisionMessage });
+  } catch (error) {
+    console.error("Error checking decision:", error);
+    res.status(500).send({ error: "Failed to check decision" });
+  }
+});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////Annuler demande MSI//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.put("/MSI/:Username/cancel", async (req, res) => {
+  const { Username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    // Mettre à jour la base de données pour annuler la participation
+    await db.Enseignants.update(
+      { Est_participe: "false" },
+      { where: { Username_NSS: Username } }
+    );
+
+    // Supprimer la ligne correspondante dans la table SPE_doc
+    await MSI.destroy({ where: { Username_NSS: Username } });
+    await Destination.destroy({ where: { Username_NSS: Username } });
+
+    res.status(200).send({ message: "Participation canceled successfully" });
+  } catch (error) {
+    console.error("Error canceling participation:", error);
+    res.status(500).send({ error: "Failed to cancel participation" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Recours     MSI//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.post("/:Username/recours_MSI", async (req, res) => {
+  const { Username } = req.params;
+  const { Commentaire } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe dans la table MSI
+    const existingUserInMSI = await MSI.findOne({
+      where: { Username_NSS: Username },
+    });
+
+    if (!existingUserInMSI) {
+      return res
+        .status(404)
+        .json({ error: "L'utilisateur n'existe pas dans la table MSI." });
+    }
+
+    // Vérifier si un recours existe déjà pour cet utilisateur et ce type de demande
+    const existingRecours = await Recours.findOne({
+      where: {
+        Username: Username,
+        TypeDemande: "Manifestation Scientifique Internationale",
+      },
+    });
+
+    if (existingRecours) {
+      return res.status(400).json({
+        error:
+          "Un recours existe déjà pour ce type de demande et cet utilisateur.",
+      });
+    }
+
+    // Ajouter la demande dans la table Recours
+    await Recours.create({
+      Username: Username,
+      Commentaire,
+      TypeDemande: "Manifestation Scientifique Internationale", // Ajouter TypeDemande directement ici
+    });
+
+    return res.status(201).json({ message: "Recours ajouté avec succès" });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du recours MSI :", error);
+    return res.status(500).json({ error: "Échec de l'ajout du recours MSI" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Vérifier ouverture sesion MSI//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/session/msi/is_open", async (req, res) => {
+  try {
+    // Recherche de la session "Stage de perfectionnement à l’étrangé"
+    const sessionStagePerfectionnement = await Session.findOne({
+      where: {
+        Nom_S: "Manifestation Scientifique Internationale ",
+      },
+    });
+
+    // Recherche de la session "Recours"
+    const sessionCSF = await Session.findOne({
+      where: {
+        Nom_S: "Session CSF",
+      },
+    });
+
+    // Vérifier si la session "Stage de perfectionnement à l’étrangé" est ouverte
+    const isStageSessionOpen =
+      sessionStagePerfectionnement &&
+      sessionStagePerfectionnement.Est_ouverte === "true";
+
+    // Vérifier si la session "Recours" est fermée
+    const isCSFSessionClosed = sessionCSF && sessionCSF.Est_ouverte === "false";
+
+    // Si les deux conditions sont vérifiées, isSessionOpen sera true, sinon false
+    const isSessionOpen = isStageSessionOpen && isCSFSessionClosed;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+/////////////////////////////////////////////////////////////check Décision SSHN///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get("/sshn/:Username/decision", async (req, res) => {
+  const { Username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    const docSpe = await SSHN.findOne({ where: { Username_NSS: Username } });
+
+    if (!docSpe) {
+      return res
+        .status(404)
+        .send({ message: "No record found for the given username" });
+    }
+
+    const decisionMessage =
+      docSpe.Decision === "true" ? "Accepté" : "Pas encore accepté";
+    res.status(200).send({ message: decisionMessage });
+  } catch (error) {
+    console.error("Error checking decision:", error);
+    res.status(500).send({ error: "Failed to check decision" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////Annuler demande SSHN//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.put("/sshn/:Username/cancel", async (req, res) => {
+  const { Username } = req.params;
+  console.log("Request body:", req.params);
+  try {
+    // Mettre à jour la base de données pour annuler la participation
+    await db.Enseignants.update(
+      { Est_participe: "false" },
+      { where: { Username_NSS: Username } }
+    );
+
+    // Supprimer la ligne correspondante dans la table SPE_doc
+    await SSHN.destroy({ where: { Username_NSS: Username } });
+
+    res.status(200).send({ message: "Participation canceled successfully" });
+  } catch (error) {
+    console.error("Error canceling participation:", error);
+    res.status(500).send({ error: "Failed to cancel participation" });
+  }
+});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Recours SSHN//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.post("/:Username/recoursSSHN", async (req, res) => {
+  const { Username } = req.params;
+  const { Commentaire } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe dans la table MSI
+    const existingUserInMSI = await SSHN.findOne({
+      where: { Username_NSS: Username },
+    });
+
+    if (!existingUserInMSI) {
+      return res
+        .status(404)
+        .json({ error: "L'utilisateur n'existe pas dans la table MSI." });
+    }
+
+    // Vérifier si un recours existe déjà pour cet utilisateur et ce type de demande
+    const existingRecours = await Recours.findOne({
+      where: {
+        Username: Username,
+        TypeDemande: "Séjour scientifique de courte durée de haut niveau",
+      },
+    });
+
+    if (existingRecours) {
+      return res.status(400).json({
+        error:
+          "Un recours existe déjà pour ce type de demande et cet utilisateur.",
+      });
+    }
+
+    // Ajouter la demande dans la table Recours
+    await Recours.create({
+      Username: Username,
+      Commentaire,
+      TypeDemande: "Séjour scientifique de courte durée de haut niveau", // Ajouter TypeDemande directement ici
+    });
+
+    return res.status(201).json({ message: "Recours ajouté avec succès" });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du recours MSI :", error);
+    return res.status(500).json({ error: "Échec de l'ajout du recours MSI" });
+  }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Vérifier ouverture sesion SSHN//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/session/sshn/is_open", async (req, res) => {
+  try {
+    // Recherche de la session "Stage de perfectionnement à l’étrangé"
+    const sessionStagePerfectionnement = await Session.findOne({
+      where: {
+        Nom_S: "Séjour scientifique de courte durée de haut niveau",
+      },
+    });
+
+    // Recherche de la session "Recours"
+    const sessionCSF = await Session.findOne({
+      where: {
+        Nom_S: "Session CSF",
+      },
+    });
+
+    // Vérifier si la session "Stage de perfectionnement à l’étrangé" est ouverte
+    const isStageSessionOpen =
+      sessionStagePerfectionnement &&
+      sessionStagePerfectionnement.Est_ouverte === "true";
+
+    // Vérifier si la session "Recours" est fermée
+    const isCSFSessionClosed = sessionCSF && sessionCSF.Est_ouverte === "false";
+
+    // Si les deux conditions sont vérifiées, isSessionOpen sera true, sinon false
+    const isSessionOpen = isStageSessionOpen && isCSFSessionClosed;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+/////////////////////////////////////////////demande pour CSF//////////////////////////////////////////////
+app.get("/demande_MSI/CSF", async (req, res) => {
+  try {
+    const demandesMSI = await MSI.findAll();
+    const demandesSSHN = await SSHN.findAll();
+    const demandesSPE = await SPE_doc.findAll();
+    // Combine the results
+    const result = {
+      demandesMSI,
+      demandesSSHN,
+      demandesSPE,
+    };
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+///////////////////////////////////////////////////////////update dicision MSI SSHN//////////////////////
+app.put("/CSF/update/:type/:id", async (req, res) => {
+  const { type, id } = req.params;
+  const { Decision } = req.body;
+
+  let tableName;
+
+  if (type === "MSI") {
+    tableName = MSI;
+  } else if (type === "SSHN") {
+    tableName = SSHN;
+  } else {
+    return res.status(400).json({ error: "Invalid type" });
+  }
+
+  try {
+    const decisionValue = Decision === "Accepté" ? "true" : "false";
+    await tableName.update({ Decision: decisionValue }, { where: { id } });
+
+    res.status(200).json({ message: "Update successful" });
+  } catch (error) {
+    console.error("Error updating decision:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+//////////////////////////////////////////////////////////////// Get all DEMANDES  pour un membre de la commission/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+app.get("/demandes/:Username", async (req, res) => {
+  const { Username } = req.params;
+  try {
+    // Find the binome id associated with the given Username
+    const binome = await Binome_Comission.findOne({
+      where: {
+        [Op.or]: [{ Username_Nss1: Username }, { Username_Nss2: Username }],
+      },
+    });
+
+    if (!binome) {
+      return res
+        .status(404)
+        .json({ message: "Binome not found for the given Username" });
+    }
+
+    // Fetch the treatment type
+    const { Type_traitement } = binome;
+
+    let demandes = [];
+    if (Type_traitement === "traitement_enseignant") {
+      const sshnDemandes = await SSHN.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+      const msiDemandes = await MSI.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+      //const speDemandes = await SPE_doc.findAll({ where:   { Username_NSS3: Username }  });
+
+      demandes = [
+        ...sshnDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Séjour scientifique de courte durée de haut niveau",
+        })),
+        ...msiDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Manifestation Scientifique Internationale",
+        })),
+        //...speDemandes.map(demande => ({ ...demande.toJSON(), Table_Type: 'SPE_doc' }))
+      ];
+    } else if (Type_traitement === "traitement_doctorant") {
+      const speDemandes = await SPE_doc.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+      //const msiDemandes = await MSI.findAll({ where:  { Username_NSS3: Username } } );
+      //const sshnDemandes = await SSHN.findAll({ where:   { Username_NSS3: Username }  });
+      demandes = [
+        //...sshnDemandes.map(demande => ({ ...demande.toJSON(), Table_Type: 'SSHN' })),
+        //...msiDemandes.map(demande => ({ ...demande.toJSON(), Table_Type: 'MSI' })),
+        ...speDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Stage de perfectionnement à l’étranger",
+        })),
+      ];
+    } else {
+      return res.status(400).json({ message: "Unknown treatment type" });
+    }
+
+    console.log(`demandes`, demandes, Type_traitement);
+    res.json({ demandes, Type_traitement });
+  } catch (error) {
+    console.error("Error fetching demandes data:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////Saisire la note plus l'affectation à un troisieme membre//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const { Sequelize } = require("sequelize");
+const sequelize = new Sequelize("chimie_bd", "root", null, {
+  host: "127.0.0.1",
+  dialect: "mysql",
+});
+
+app.put("/demandes/update/:table/:id", async (req, res) => {
+  const { table, id } = req.params;
+  const { note, Username } = req.body;
+
+  console.log(`Updating demande in table ${table} with id ${id}`, req.body);
+
+  const transaction = await sequelize.transaction();
+  try {
+    let demande;
+    if (table === "Stage de perfectionnement à l’étranger") {
+      demande = await SPE_doc.findByPk(id, { transaction });
+    } else if (table === "Séjour scientifique de courte durée de haut niveau") {
+      demande = await SSHN.findByPk(id, { transaction });
+    } else if (table === "Manifestation Scientifique Internationale") {
+      demande = await MSI.findByPk(id, { transaction });
+    } else {
+      await transaction.rollback();
+      return res.status(400).json({ message: "Unknown table" });
+    }
+
+    if (!demande) {
+      await transaction.rollback();
+      return res.status(404).json({ message: "Demande not found" });
+    }
+
+    let currentUsername;
+    if (table === "SPE_doc") {
+      currentUsername = demande.Username_Mat;
+    } else {
+      currentUsername = demande.Username_NSS;
+    }
+
+    if (demande.Note1 === null) {
+      demande.Note1 = note;
+      demande.Note1By = Username;
+    } else if (demande.Note2 === null) {
+      if (demande.Note1By !== Username) {
+        demande.Note2 = note;
+        demande.Note2By = Username;
+        const diff = Math.abs(demande.Note1 - demande.Note2);
+
+        if (diff === 0) {
+          demande.Note_finale = demande.Note1;
+        } else {
+          const binome = await Binome_Comission.findByPk(demande.id_Binome, {
+            transaction,
+          });
+
+          if (binome) {
+            const potentialMembers = await Membre_Commission.findAll({
+              where: {
+                Username_NSS: {
+                  [Op.notIn]: [
+                    binome.Username_Nss1,
+                    binome.Username_Nss2,
+                    currentUsername,
+                  ],
+                },
+              },
+              transaction,
+            });
+
+            const filteredMembers = await Promise.all(
+              potentialMembers.map(async (member) => {
+                const memberBinome = await Binome_Comission.findByPk(
+                  member.id_Binome,
+                  { transaction }
+                );
+                return memberBinome &&
+                  memberBinome.Type_traitement === binome.Type_traitement
+                  ? member
+                  : null;
+              })
+            );
+
+            const validMembers = filteredMembers.filter(
+              (member) => member !== null
+            );
+
+            if (validMembers.length > 0) {
+              const randomIndex = Math.floor(
+                Math.random() * validMembers.length
+              );
+              const selectedMember = validMembers[randomIndex];
+              demande.Username_NSS3 = selectedMember.Username_NSS;
+            } else {
+              if (potentialMembers.length > 0) {
+                const randomIndex = Math.floor(
+                  Math.random() * potentialMembers.length
+                );
+                const selectedMember = potentialMembers[randomIndex];
+                demande.Username_NSS3 = selectedMember.Username_NSS;
+              } else {
+                await transaction.rollback();
+                return res
+                  .status(404)
+                  .json({ message: "No suitable members found" });
+              }
+            }
+          }
+        }
+      } else {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ message: "Member who provided Note1 cannot provide Note2" });
+      }
+    } else {
+      if (demande.Note_finale === null) {
+        if (demande.Username_NSS3 === Username) {
+          demande.Note_finale = note;
+        } else {
+          await transaction.rollback();
+          return res
+            .status(400)
+            .json({ message: "Both notes have already been provided" });
+        }
+      } else {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ message: "The final note is already entered." });
+      }
+    }
+
+    await demande.save({ transaction });
+    await transaction.commit();
+    res.status(200).json(demande);
+  } catch (error) {
+    console.error("Error updating demande:", error);
+    await transaction.rollback();
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+////////////////////////////////                  Get all DEMANDES qui en fais un recours pour un membre de la commission                            /////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get("/demandes/Recours/:Username", async (req, res) => {
+  const { Username } = req.params;
+  try {
+    // Find the binome id associated with the given Username
+    const binome = await Binome_Comission.findOne({
+      where: {
+        [Op.or]: [{ Username_Nss1: Username }, { Username_Nss2: Username }],
+      },
+    });
+
+    if (!binome) {
+      return res
+        .status(404)
+        .json({ message: "Binome not found for the given Username" });
+    }
+
+    // Fetch the treatment type
+    const { Type_traitement } = binome;
+
+    let demandes = [];
+    if (Type_traitement === "traitement_enseignant") {
+      const sshnDemandes = await SSHN.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+      const msiDemandes = await MSI.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+
+      demandes = [
+        ...sshnDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Séjour scientifique de courte durée de haut niveau",
+        })),
+        ...msiDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Manifestation Scientifique Internationale",
+        })),
+      ];
+    } else if (Type_traitement === "traitement_doctorant") {
+      const speDemandes = await SPE_doc.findAll({
+        where: {
+          [Op.or]: [{ id_Binome: binome.id }, { Username_NSS3: Username }],
+        },
+      });
+      demandes = [
+        ...speDemandes.map((demande) => ({
+          ...demande.toJSON(),
+          Table_Type: "Stage de perfectionnement à l’étranger",
+        })),
+      ];
+    } else {
+      return res.status(400).json({ message: "Unknown treatment type" });
+    }
+
+    // Filter demandes based on Recours table
+    const filteredDemandes = [];
+    for (const demande of demandes) {
+      const usernameField =
+        demande.Table_Type === "Stage de perfectionnement à l’étranger"
+          ? "Username_Mat"
+          : "Username_NSS";
+      const recours = await Recours.findOne({
+        where: {
+          TypeDemande: demande.Table_Type,
+          Username: demande[usernameField],
+        },
+      });
+
+      if (recours) {
+        filteredDemandes.push(demande);
+      }
+    }
+
+    console.log(`demandes`, filteredDemandes, Type_traitement);
+    res.json({ demandes: filteredDemandes, Type_traitement });
+  } catch (error) {
+    console.error("Error fetching demandes data:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////Saisire la note aprés Recours    //////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.put("/demandes/update/Recours/:table/:id", async (req, res) => {
+  const { table, id } = req.params;
+  const { note, Username } = req.body;
+
+  console.log(`Updating demande in table ${table} with id ${id}`, req.body);
+
+  const transaction = await sequelize.transaction();
+  try {
+    let demande;
+    if (table === "Stage de perfectionnement à l’étranger") {
+      demande = await SPE_doc.findByPk(id, { transaction });
+    } else if (table === "Séjour scientifique de courte durée de haut niveau") {
+      demande = await SSHN.findByPk(id, { transaction });
+    } else if (table === "Manifestation Scientifique Internationale") {
+      demande = await MSI.findByPk(id, { transaction });
+    } else {
+      await transaction.rollback();
+      return res.status(400).json({ message: "Unknown table" });
+    }
+
+    if (!demande) {
+      await transaction.rollback();
+      return res.status(404).json({ message: "Demande not found" });
+    }
+
+    let currentUsername;
+    if (table === "Stage de perfectionnement à l’étranger") {
+      currentUsername = demande.Username_Mat;
+    } else {
+      currentUsername = demande.Username_NSS;
+    }
+
+    if (demande.Note1 === null) {
+      demande.Note1 = note;
+      demande.Note1By = Username;
+    } else if (demande.Note2 === null) {
+      if (demande.Note1By !== Username) {
+        demande.Note2 = note;
+        demande.Note2By = Username;
+        const diff = Math.abs(demande.Note1 - demande.Note2);
+
+        if (diff === 0) {
+          demande.Note_finale = demande.Note1;
+        } else if (!demande.Username_NSS3) {
+          const binome = await Binome_Comission.findByPk(demande.id_Binome, {
+            transaction,
+          });
+
+          if (binome) {
+            const potentialMembers = await Membre_Commission.findAll({
+              where: {
+                Username_NSS: {
+                  [Op.notIn]: [
+                    binome.Username_Nss1,
+                    binome.Username_Nss2,
+                    currentUsername,
+                  ],
+                },
+              },
+              transaction,
+            });
+
+            const filteredMembers = await Promise.all(
+              potentialMembers.map(async (member) => {
+                const memberBinome = await Binome_Comission.findByPk(
+                  member.id_Binome,
+                  { transaction }
+                );
+                return memberBinome &&
+                  memberBinome.Type_traitement === binome.Type_traitement
+                  ? member
+                  : null;
+              })
+            );
+
+            const validMembers = filteredMembers.filter(
+              (member) => member !== null
+            );
+
+            if (validMembers.length > 0) {
+              const randomIndex = Math.floor(
+                Math.random() * validMembers.length
+              );
+              const selectedMember = validMembers[randomIndex];
+              demande.Username_NSS3 = selectedMember.Username_NSS;
+            } else {
+              if (potentialMembers.length > 0) {
+                const randomIndex = Math.floor(
+                  Math.random() * potentialMembers.length
+                );
+                const selectedMember = potentialMembers[randomIndex];
+                demande.Username_NSS3 = selectedMember.Username_NSS;
+              }
+            }
+          }
+        } else {
+          await demande.save({ transaction });
+          await transaction.rollback();
+          res.status(200).json(demande);
+          //await transaction.rollback();
+          //await transaction.commit();
+          //return res.status(400).json({ message: "Both notes have already been provided" });
+        }
+      } else {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ message: "Member who provided Note1 cannot provide Note2" });
+      }
+    } else {
+      if (demande.Note_finale === null) {
+        if (demande.Username_NSS3 === Username) {
+          demande.Note_finale = note;
+        } else {
+          await transaction.rollback();
+          return res
+            .status(400)
+            .json({ message: "The final note is already entered." });
+        }
+      } else {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json({ message: "The final note is already entered." });
+      }
+    }
+
+    await demande.save({ transaction });
+    await transaction.commit();
+    res.status(200).json(demande);
+  } catch (error) {
+    console.error("Error updating demande:", error);
+    await transaction.rollback();
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+/////////////////////////////////////////////////////////         Vider  les notes       //////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.put("/nullify-notes", async (req, res) => {
+  try {
+    // Tables and their respective type names
+    const tables = [
+      {
+        model: SPE_doc,
+        type: "Stage de perfectionnement à l’étranger",
+        usernameField: "Username_Mat",
+      },
+      {
+        model: MSI,
+        type: "Manifestation Scientifique Internationale",
+        usernameField: "Username_NSS",
+      },
+      {
+        model: SSHN,
+        type: "Séjour scientifique de courte durée de haut niveau",
+        usernameField: "Username_NSS",
+      },
+    ];
+
+    for (const table of tables) {
+      const demandes = await table.model.findAll();
+
+      for (const demande of demandes) {
+        const usernameField = table.usernameField;
+        const recours = await Recours.findOne({
+          where: {
+            TypeDemande: table.type,
+            Username: demande[usernameField],
+          },
+        });
+
+        if (recours) {
+          // Update the demande to nullify the specified fields
+          await demande.update({
+            Note1: null,
+            Note2: null,
+            Note_finale: null,
+            Note1By: null,
+            Note2By: null,
+          });
+        }
+      }
+    }
+
+    res.status(200).json({ message: "Notes nullified successfully." });
+  } catch (error) {
+    console.error("Error nullifying notes:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});

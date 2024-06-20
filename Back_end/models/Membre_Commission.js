@@ -9,6 +9,10 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM("true", "false"),
       defaultValue: "false",
     },
+    id_Binome: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   });
 
   return Membre_Commission;

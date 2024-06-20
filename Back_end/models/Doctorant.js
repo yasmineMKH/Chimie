@@ -163,7 +163,10 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-
+    CLE: {
+      type: DataTypes.ENUM("Inscrit", "Non Inscrit"),
+      defaultValue: "Inscrit",
+    },
     Etat_compte: {
       type: DataTypes.ENUM("true", "false"),
       defaultValue: "false",

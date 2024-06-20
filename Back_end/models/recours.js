@@ -9,7 +9,7 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
-    Username_Mat: {
+    Username: {
       type: DataTypes.STRING(100),
       allowNull: true,
     },
