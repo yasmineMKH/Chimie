@@ -3959,3 +3959,136 @@ app.put("/nullify-notes", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+////////////////////////////////////////////////////liste condidats///////////////////////////////////////////////////////////////////////
+app.get("/liste_condidat", async (req, res) => {
+  try {
+    // Fetch data for MSI, SSHN, and SPE
+    const msiRecords = await db.Destination.findAll();
+    const sshnRecords = await db.SSHN.findAll();
+    const speRecords = await db.SPE_doc.findAll();
+
+    // Create Maps to ensure uniqueness of users in each category
+    const uniqueMSIUsers = new Map();
+    const uniqueSSHNUsers = new Map();
+    const uniqueSPEUsers = new Map();
+
+    // Function to process records and add unique users to the corresponding Map
+    const processRecords = async (records, userType, uniqueUsersMap) => {
+      for (const record of records) {
+        let user;
+        if (userType === "MSI" || userType === "SSHN") {
+          user = await db.Enseignants.findOne({
+            where: { Username_NSS: record.Username_NSS },
+            attributes: ["Firstname_fr", "Lastname_fr", "Grade"],
+          });
+        } else if (userType === "SPE") {
+          user = await db.Doctorant.findOne({
+            where: { Username_Mat: record.Username_Mat },
+            attributes: ["Nom_fr", "Prenoms_fr", "Grade"],
+          });
+        }
+
+        if (user) {
+          const userKey = `${user.Firstname_fr} ${user.Lastname_fr}`;
+          if (!uniqueUsersMap.has(userKey)) {
+            uniqueUsersMap.set(userKey, {
+              Firstname: user.Firstname_fr,
+              Lastname: user.Lastname_fr,
+              Grade: user.Grade,
+            });
+          }
+        }
+      }
+    };
+
+    // Process each record type
+    await processRecords(msiRecords, "MSI", uniqueMSIUsers);
+    await processRecords(sshnRecords, "SSHN", uniqueSSHNUsers);
+    await processRecords(speRecords, "SPE", uniqueSPEUsers);
+
+    // Convert Map values to arrays
+    const uniqueMSIArray = Array.from(uniqueMSIUsers.values());
+    const uniqueSSHNArray = Array.from(uniqueSSHNUsers.values());
+    const uniqueSPEArray = Array.from(uniqueSPEUsers.values());
+
+    res.json({
+      MSI: uniqueMSIArray,
+      SSHN: uniqueSSHNArray,
+      SPE: uniqueSPEArray,
+    });
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).json({ error: "Failed to fetch data" });
+  }
+});
+////////////////////////////////////////////////////google sheets liste des participants /////////////////////////////////////////////////
+const { google } = require("googleapis");
+const sheets = google.sheets("v4");
+const fs = require("fs");
+
+// Path to the credentials JSON file you downloaded
+const { CREDENTIALS_PATH } = require("./googlesheets"); // Adapter le chemin selon votre structure
+// The ID of the Google Sheet you want to update
+const SPREADSHEET_ID = "your_spreadsheet_id";
+
+const authenticateGoogle = () => {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: CREDENTIALS_PATH,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+  return auth;
+};
+
+const appendDataToSheet = async (auth, data, sheetName) => {
+  const sheets = google.sheets({ version: "v4", auth });
+  const resource = {
+    values: data,
+  };
+  const range = `${sheetName}!A1`;
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: "RAW",
+      resource,
+    });
+  } catch (error) {
+    console.error("Error appending data to sheet:", error);
+  }
+};
+
+app.post("/export_to_sheet", async (req, res) => {
+  try {
+    const auth = authenticateGoogle();
+    const { msiData, sshnData, speData } = req.body;
+
+    // Prepare the data for each sheet
+    const msiSheetData = msiData.map(({ Firstname, Lastname, Grade }) => [
+      Firstname,
+      Lastname,
+      Grade,
+    ]);
+    const sshnSheetData = sshnData.map(({ Firstname, Lastname, Grade }) => [
+      Firstname,
+      Lastname,
+      Grade,
+    ]);
+    const speSheetData = speData.map(({ Firstname, Lastname, Grade }) => [
+      Firstname,
+      Lastname,
+      Grade,
+    ]);
+
+    // Append data to respective sheets
+    await appendDataToSheet(auth, msiSheetData, "MSI");
+    await appendDataToSheet(auth, sshnSheetData, "SSHN");
+    await appendDataToSheet(auth, speSheetData, "SPE");
+
+    res
+      .status(200)
+      .json({ message: "Data exported to Google Sheets successfully." });
+  } catch (error) {
+    console.error("Error exporting data to Google Sheets:", error);
+    res.status(500).json({ error: "Failed to export data to Google Sheets" });
+  }
+});
