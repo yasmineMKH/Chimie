@@ -3161,7 +3161,7 @@ app.post("/:Username/recours_MSI", async (req, res) => {
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////Vérifier ouverture sesion MSI//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////Vérifier ouverture sesion MSI1//////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 app.get("/session/msi/is_open", async (req, res) => {
@@ -3170,6 +3170,43 @@ app.get("/session/msi/is_open", async (req, res) => {
     const sessionStagePerfectionnement = await Session.findOne({
       where: {
         Nom_S: "Manifestation Scientifique Internationale ",
+      },
+    });
+
+    // Recherche de la session "Recours"
+    const sessionCSF = await Session.findOne({
+      where: {
+        Nom_S: "Session CSF",
+      },
+    });
+
+    // Vérifier si la session "Stage de perfectionnement à l’étrangé" est ouverte
+    const isStageSessionOpen =
+      sessionStagePerfectionnement &&
+      sessionStagePerfectionnement.Est_ouverte === "true";
+
+    // Vérifier si la session "Recours" est fermée
+    const isCSFSessionClosed = sessionCSF && sessionCSF.Est_ouverte === "false";
+
+    // Si les deux conditions sont vérifiées, isSessionOpen sera true, sinon false
+    const isSessionOpen = isStageSessionOpen && isCSFSessionClosed;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+///////////////////////////////////////////////////////////MSI2//////////////////////////////////////////////////////
+
+app.get("/session/msi2/is_open", async (req, res) => {
+  try {
+    // Recherche de la session "Stage de perfectionnement à l’étrangé"
+    const sessionStagePerfectionnement = await Session.findOne({
+      where: {
+        Nom_S: "Manifestation Scientifique Internationale2 ",
       },
     });
 
@@ -3333,7 +3370,49 @@ app.get("/session/sshn/is_open", async (req, res) => {
       .json({ error: "Échec de la vérification de la session" });
   }
 });
-/////////////////////////////////////////////demande pour CSF//////////////////////////////////////////////
+//////////////////////////////////////////ouverture sshn2///////////////////////////////////////////////////////////
+app.get("/session/sshn2/is_open", async (req, res) => {
+  try {
+    // Recherche de la session "Stage de perfectionnement à l’étrangé"
+    const sessionStagePerfectionnement = await Session.findOne({
+      where: {
+        Nom_S: "Séjour scientifique de courte durée de haut niveau2",
+      },
+    });
+
+    // Recherche de la session "Recours"
+    const sessionCSF = await Session.findOne({
+      where: {
+        Nom_S: "Session CSF",
+      },
+    });
+    const sessionSshn1 = await Session.findOne({
+      where: {
+        Nom_S: "Séjour scientifique de courte durée de haut niveau",
+      },
+    });
+    // Vérifier si la session "Stage de perfectionnement à l’étrangé" est ouverte
+    const isStageSessionOpen =
+      sessionStagePerfectionnement &&
+      sessionStagePerfectionnement.Est_ouverte === "true";
+
+    // Vérifier si la session "Recours" est fermée
+    const isCSFSessionClosed = sessionCSF && sessionCSF.Est_ouverte === "false";
+    const isshn1sessionClosed =
+      sessionSshn1 && sessionSshn1.Est_ouverte === "false";
+    // Si les deux conditions sont vérifiées, isSessionOpen sera true, sinon false
+    const isSessionOpen =
+      isStageSessionOpen && isCSFSessionClosed && isshn1sessionClosed;
+
+    return res.status(200).json({ is_open: isSessionOpen });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la session :", error);
+    return res
+      .status(500)
+      .json({ error: "Échec de la vérification de la session" });
+  }
+});
+/////////////////////////////////////////////demande pour CSF///////////////////////////////////////////////////////////
 app.get("/demande_MSI/CSF", async (req, res) => {
   try {
     const demandesMSI = await MSI.findAll();
